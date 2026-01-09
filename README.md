@@ -19,4 +19,7 @@ Let’s keep the spirit of early computing alive 🚀
 🎉 **HAPPY BIRTHDAY, KIM-1!** 🎉  
 Wishing you — and all of us — a fantastic and hacky **Year 2026** 🥳✨
 
-<iframe width="560" height="315" src="https://www.youtube.com/embed/2QvOpr8ChKo?si=b-PpVexupMK694uj" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+
+https://github.com/user-attachments/assets/4e9a981a-51b0-4728-888d-ba34f7d75d37
+
+
