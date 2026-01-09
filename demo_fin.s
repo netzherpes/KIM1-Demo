@@ -2,7 +2,7 @@
 ;******************************* 
 ;* The KIM-1 is 50 Demo \0/    *
 ;*                             *
-;* coded by netzherpes in 2025 *
+;* coded by netzherpes in 2026 *
 ;*******************************
 
 
@@ -1759,4 +1759,5 @@ GREET:
         
 		
 		
+
 		
