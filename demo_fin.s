@@ -2,7 +2,7 @@
 ;******************************* 
 ;* The KIM-1 is 50 Demo \0/    *
 ;*                             *
-;* coded by netzherpes in 2026 *
+;* coded by netzherpes in 2025 *
 ;*******************************
 
 
@@ -366,15 +366,15 @@ DIR10:    ; Zwei links, eins unten
           STA Y_OFF,X
           JMP CHECKMOVE
           
-DIR11:    ; Eins links, zwei oben
+DIR11:    ; Eins links, ein unten
           LDX STARPTR
           LDA X_OFF,X
           SEC
           SBC #1
           STA X_OFF,X
           LDA Y_OFF,X
-          SEC
-          SBC #2
+          CLC
+          ADC #1
           STA Y_OFF,X
           JMP CHECKMOVE
           
@@ -1759,5 +1759,4 @@ GREET:
         
 		
 		
-
 		
