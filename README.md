@@ -26,7 +26,7 @@ Wishing you — and all of us — a fantastic and hacky **Year 2026** 🥳✨
 **Things that are very useful in this code:**
 
 Take any coordinates in HEX out of the memory and use them to place your cursor.
-The problem is, that to position your cursur, you need to send the x/y coordinates as single chars to the terminal program, like (ESC)[xx;yyH  - Imagine just having hex data, i.e. $20 (32 dec) and you need to  send a 3 and a 2 separated to your terminal... This routine will do it - seperate the tens from the ones. Now you can like draw a rectangle, a circle or whatever. You can start a painting program if you like.
+The problem is, that to position your cursur, you need to send the x/y coordinates as single chars to the terminal program, like (ESC)[xx;yyH  - Imagine just having hex data, i.e. $20 (= 32 dec) and you now need to send a 3 and a 2 (as acii in HEX = $33 and $32) separated to your terminal... This routine will do it - seperate the tens from the ones. Now you can like draw a rectangle, a circle or whatever. You can start a painting program if you like.
 ```
 ; ANSI Cursor positionieren (Row ; Col)
 GOTOXY:
