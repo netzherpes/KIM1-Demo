@@ -80,9 +80,11 @@ PUTDEC1:  TXA           ; Einer zurück
           LDA TEMP      ; Original wiederherstellen
           RTS
 ```
-***NEW***
+***NEW***<br>
 I've found out that the compression tool "Exomizer" can be used to compress KIM-1 files, when using the correct command line parameters:
+```
 .\exomizer.exe  sfx 0x2000 .\exotest.prg -o test.prg -n -Di_load_addr=$2c00
+```
 
 I needed to transfer the programm from a  *.bin to *.prg as the program expects the start address in the beginning (a C64 thing). I saved the program at 2C00, that is where your new demo startpoint is now Parameters: without any fany animations (-n) or a BASIC start line (-Di_...) , as you might want to have on a C64.
 
