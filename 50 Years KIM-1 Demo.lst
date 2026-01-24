@@ -1,0 +1,2261 @@
+ca65 V2.19 - Git 3caceb8
+Main file   : .\demo4.s
+Current file: .\demo4.s
+
+000000r 1               
+000000r 1               ;*******************************
+000000r 1               ;* The KIM-1 is 50 Demo \0/    *
+000000r 1               ;*                             *
+000000r 1               ;* coded by netzherpes in 2025 *
+000000r 1               ;*******************************
+000000r 1               
+000000r 1               
+000000r 1               
+000000r 1               ; Konstanten
+000000r 1               
+000000r 1               CHOUT   = $1EA0		    ; KIM-1 ROM Routine für Zeichenausgabe
+000000r 1               GETCH   = $1E5A	        ; KIM-1 ROUTINE for input
+000000r 1               DATAPTR = $00           ; Zero Page Pointer (Low Byte)
+000000r 1               DATAPTH = $01           ; Zero Page Pointer (High Byte)
+000000r 1               counter = $06
+000000r 1               tmp 	= $10
+000000r 1                   SAD     = $1740      ; data port for pins 1-4
+000000r 1                   SADD    = $1741
+000000r 1                   SBD     = $1742      ; data port for pins 5-6
+000000r 1                   SBDD    = $1743
+000000r 1                   TIMER2  = $1747      ; optional 2nd 6532 timer
+000000r 1                   led1    = $08        ; LED selectors (left to right)
+000000r 1                   led2    = $0a
+000000r 1                   led3    = $0c
+000000r 1                   led4    = $0e
+000000r 1                   led5    = $10
+000000r 1                   led6    = $12
+000000r 1                   lout    = $7f        ; set pins as output to left 4 LEDs
+000000r 1                   rout    = $1e        ; set pins as output to right 2 LEDs
+000000r 1                   tmr     = $db
+000000r 1                   ptr     = $dc
+000000r 1                   xfrhi   = $dd
+000000r 1                   xfrlo   = $de
+000000r 1                   tmp1    = $df
+000000r 1                   cbuff   = $e8
+000000r 1               
+000000r 1               
+000000r 1               ; Zero Page Variablen TEIL 2
+000000r 1               STAR0     = $30      ; Stern 0: Dir, X, Y, OldX, OldY (5 Bytes)
+000000r 1               STAR1     = $35      ; Stern 1: Dir, X, Y, OldX, OldY (5 Bytes)
+000000r 1               STAR2     = $3A      ; Stern 2: Dir, X, Y, OldX, OldY (5 Bytes)
+000000r 1               STAR3     = $3F      ; Stern 3: Dir, X, Y, OldX, OldY (5 Bytes)
+000000r 1               STAR4     = $44      ; Stern 4: Dir, X, Y, OldX, OldY (5 Bytes)
+000000r 1               RNDVAL    = $49      ; Zufallswert
+000000r 1               CURX      = $4A      ; Aktuelle X-Position für GOTOXY
+000000r 1               CURY      = $4B      ; Aktuelle Y-Position für GOTOXY
+000000r 1               TEMP      = $4C      ; Temporär
+000000r 1               STARPTR   = $4D      ; Zeiger auf aktuellen Stern
+000000r 1               RADIUS    = $4E      ; Radius
+000000r 1               ANGLE     = $4F      ; Winkel (0-3)
+000000r 1               DRAWCHAR  = $50      ; Zeichen zum Zeichnen
+000000r 1               CENTERX_V = $51      ; Variables Zentrum X
+000000r 1               CENTERY_V = $52      ; Variables Zentrum Y
+000000r 1               COLOR     = $53      ;the color
+000000r 1               
+000000r 1               
+000000r 1               ; Konstanten
+000000r 1               CENTERX   = 40
+000000r 1               CENTERY   = 12
+000000r 1               STAR_CHR  = $2A      ; ASCII '*'
+000000r 1               SPACE_CHR = $20      ; ASCII ' '
+000000r 1               
+000000r 1               ; Stern-Struktur
+000000r 1               DIR_OFF   = 0        ; Richtung
+000000r 1               X_OFF     = 1        ; X-Position
+000000r 1               Y_OFF     = 2        ; Y-Position
+000000r 1               OLDX_OFF  = 3        ; Alte X-Position
+000000r 1               OLDY_OFF  = 4        ; Alte Y-Position
+000000r 1               
+000000r 1               ; define some pseudo-alphabet characters
+000000r 1                   A_      = $f7
+000000r 1                   _a      = $5f
+000000r 1                   B_      = $ff
+000000r 1                   _b      = $fc
+000000r 1                   C_      = $b9
+000000r 1                   _c      = $d8
+000000r 1                   _d      = $de
+000000r 1                   E_      = $f9
+000000r 1                   _e      = $7b
+000000r 1                   F_      = $f1
+000000r 1                   G_      = $bd
+000000r 1                   _g      = $ef
+000000r 1                   H_      = $f6
+000000r 1                   _h      = $f4
+000000r 1                   I_      = $b0
+000000r 1                   _i      = $10
+000000r 1                   J_      = $9e
+000000r 1                   K_      = $f0    ; non-standard
+000000r 1                   L_      = $b8
+000000r 1                   _l      = $86
+000000r 1                   _m      = $a3    ; non-standard
+000000r 1                   N_      = $b7
+000000r 1                   _n      = $54
+000000r 1                   O_      = $bf
+000000r 1                   _o      = $dc
+000000r 1                   P_      = $f3
+000000r 1                   _q      = $e7
+000000r 1                   R_      = $31
+000000r 1                   _r      = $d0
+000000r 1                   S_      = $ed
+000000r 1                   _t      = $f8
+000000r 1                   U_      = $be
+000000r 1                   _u      = $9c
+000000r 1                   _v      = $c2    ; non-standard
+000000r 1                   _w      = $0c    ; the right half after _u
+000000r 1                   _x      = $e4    ; non-standard
+000000r 1                   Y_      = $ee
+000000r 1                   Z_      = $5b
+000000r 1                   Qmrk    = $d3
+000000r 1                   dsh     = $c0
+000000r 1                   spc     = $80
+000000r 1                   ch0     = $bf
+000000r 1                   ch1     = $86
+000000r 1                   ch2     = $dB
+000000r 1                   ch3     = $cf
+000000r 1                   ch4     = $e6
+000000r 1                   ch5     = $ed
+000000r 1                   ch6     = $fd
+000000r 1                   ch7     = $87
+000000r 1                   ch8     = $ff
+000000r 1                   ch9     = $ef
+000000r 1               
+000000r 1               
+000000r 1               .ORG $2000
+002000  1               
+002000  1               ;--------------PART 1 -------------------------------------------
+002000  1               
+002000  1  A9 0A        INIT:   LDA #10
+002002  1  85 06        		STA counter	; Repeat the KIM-flash 10 times
+002004  1               START:
+002004  1                       ; Initialisiere Zeiger auf ASCII-Daten
+002004  1  A9 EE                LDA #<ASCIIDATA     ; Low Byte der Datenadresse
+002006  1  85 00                STA DATAPTR
+002008  1  A9 25                LDA #>ASCIIDATA     ; High Byte der Datenadresse
+00200A  1  85 01                STA DATAPTH
+00200C  1               
+00200C  1               LOOP:
+00200C  1                       ; Lade nächstes Zeichen
+00200C  1  A0 00                LDY #$00
+00200E  1  B1 00                LDA (DATAPTR),Y
+002010  1               
+002010  1                       ; Prüfe auf String-Ende (Null-Byte)
+002010  1  F0 0C                BEQ START1
+002012  1               
+002012  1                       ; Gebe Zeichen aus
+002012  1  20 A0 1E             JSR CHOUT
+002015  1               		; Inkrementiere Zeiger
+002015  1  E6 00                INC DATAPTR
+002017  1  D0 F3                BNE LOOP            ; Wenn Low Byte nicht übergelaufen
+002019  1  E6 01                INC DATAPTH         ; Inkrementiere High Byte bei Überlauf
+00201B  1  4C 0C 20             JMP LOOP
+00201E  1               START1:
+00201E  1                       ; Initialisiere Zeiger auf ASCII-Daten
+00201E  1  A9 1D                LDA #<ANSIDATA     ; Low Byte der Datenadresse
+002020  1  85 00                STA DATAPTR
+002022  1  A9 25                LDA #>ANSIDATA     ; High Byte der Datenadresse
+002024  1  85 01                STA DATAPTH
+002026  1               
+002026  1               LOOP1:
+002026  1                       ; Lade nächstes Zeichen
+002026  1  A0 00                LDY #$00
+002028  1  B1 00                LDA (DATAPTR),Y
+00202A  1               
+00202A  1                       ; Prüfe auf String-Ende (Null-Byte)
+00202A  1  F0 1B                BEQ DONE1
+00202C  1               
+00202C  1                       ; Gebe Zeichen aus
+00202C  1  20 A0 1E             JSR CHOUT
+00202F  1               
+00202F  1  85 10        		STA tmp
+002031  1  A9 FF        		LDA #$FF
+002033  1  85 11        		STA tmp+1
+002035  1  C6 11        RLY1:   DEC tmp+1
+002037  1  EA           		nop
+002038  1  A5 11        		LDA tmp+1
+00203A  1  D0 F9        		BNE RLY1
+00203C  1  A5 10        		LDA tmp
+00203E  1               
+00203E  1               		; Inkrementiere Zeiger
+00203E  1  E6 00                INC DATAPTR
+002040  1  D0 E4                BNE LOOP1            ; Wenn Low Byte nicht übergelaufen
+002042  1  E6 01                INC DATAPTH         ; Inkrementiere High Byte bei Überlauf
+002044  1  4C 26 20             JMP LOOP1
+002047  1               
+002047  1               DONE1:
+002047  1                       ; Programm part 1 beenden - now the greetings
+002047  1  C6 06                DEC counter
+002049  1  A5 06        		LDA counter
+00204B  1  F0 03        		BEQ FINI
+00204D  1  4C 1E 20     		jmp START1
+002050  1               
+002050  1               ;--------------PART 2 -------------------------------------------
+002050  1               
+002050  1               FINI:
+002050  1  A9 4D        		LDA #<GREET     ; Low Byte der Datenadresse
+002052  1  85 00                STA DATAPTR
+002054  1  A9 2A                LDA #>GREET     ; High Byte der Datenadresse
+002056  1  85 01                STA DATAPTH
+002058  1               LOOP3:
+002058  1                       ; Lade nächstes Zeichen
+002058  1  A0 00                LDY #$00
+00205A  1  B1 00                LDA (DATAPTR),Y
+00205C  1               
+00205C  1                       ; Prüfe auf String-Ende (Null-Byte)
+00205C  1  F0 0C                BEQ END
+00205E  1               
+00205E  1                       ; Gebe Zeichen aus
+00205E  1  20 A0 1E             JSR CHOUT
+002061  1               		; Inkrementiere Zeiger
+002061  1  E6 00                INC DATAPTR
+002063  1  D0 F3                BNE LOOP3            ; Wenn Low Byte nicht übergelaufen
+002065  1  E6 01                INC DATAPTH         ; Inkrementiere High Byte bei Überlauf
+002067  1  4C 58 20             JMP LOOP3
+00206A  1               
+00206A  1               END:
+00206A  1                   lo0     = <msg0
+00206A  1                   hi0     = >msg0
+00206A  1               
+00206A  1  A0 2B            scroll: ldy #hi0
+00206C  1  A9 96                    lda #lo0
+00206E  1  20 74 20                 jsr scan
+002071  1  4C 6A 20     			jmp scroll
+002074  1               
+002074  1  84 DE            scan:   sty xfrlo       ; y and a get loaded before jsr to scan
+002076  1  85 DD                    sta xfrhi
+002078  1  A9 07                    lda #$07        ; init scan forward
+00207A  1  85 DF                    sta tmp1
+00207C  1  A0 05                    ldy #$05        ; init y
+00207E  1  A2 05            cont:   ldx #$05        ; init x
+002080  1  B1 DD            char:   lda (xfrhi),y   ; get character
+002082  1  C9 00                    cmp #$00        ; last character?
+002084  1  D0 03                    bne more        ; if not, continue
+002086  1  4C CB 20                 jmp C_START				; or jumo to the next part? hmmmm
+002089  1  95 E8            more:   sta cbuff,x     ; store char
+00208B  1  88                       dey             ; set up next char
+00208C  1  CA                       dex             ; set up next store loc
+00208D  1  10 F1                    bpl char        ; loop if not 6th char
+00208F  1  D8                       cld             ; binary mode
+002090  1  18                       clc             ; prepare to add (clear carry flag)
+002091  1  98                       tya             ; get char pointer
+002092  1  65 DF                    adc tmp1        ; update for 6 new characters
+002094  1  85 DC                    sta ptr         ; save new pointer
+002096  1  20 9E 20                 jsr dspdly      ; delay display
+002099  1  A4 DC                    ldy ptr         ; restore pointer
+00209B  1  4C 7E 20                 jmp cont        ; continue with rest of message
+00209E  1  A2 0A            dspdly: ldx #$0a        ; set the delay rate here
+0020A0  1  86 DB                    stx tmr         ; put in decr. location
+0020A2  1  A9 52            time:   lda #$52        ; load timer
+0020A4  1  8D 47 17                 sta TIMER2      ; start timer
+0020A7  1  20 B4 20         lite:   jsr disp        ; gosub display rtn
+0020AA  1  2C 47 17                 bit TIMER2      ; timer done?
+0020AD  1  10 F8                    bpl lite        ; if not, loop
+0020AF  1  C6 DB                    dec tmr         ; decrement timer counter
+0020B1  1  D0 EF                    bne time        ; not finished
+0020B3  1  60                       rts             ; now get 6 new characters
+0020B4  1  A9 7F            disp:   lda #lout       ; change left led segments
+0020B6  1  8D 41 17                 sta SADD        ; to outputs
+0020B9  1  A0 00                    ldy #$00        ; init recall index
+0020BB  1  A2 09                    ldx #$09        ; init digit number
+0020BD  1  B9 E8 00         six:    lda cbuff,y     ; get character
+0020C0  1  84 FC                    sty $fc         ; save y for monitor disp routine
+0020C2  1  20 4E 1F                 jsr $1f4e       ; monitor routine - disp char, delay 500 cycles
+0020C5  1  C8                       iny             ; set up for next char
+0020C6  1  C0 06                    cpy #$06        ; 6 char displayed?
+0020C8  1  90 F3                    bcc six         ; no
+0020CA  1  60                      	rts
+0020CB  1               
+0020CB  1               ; Let thew show begin!
+0020CB  1               ; First acsii animation
+0020CB  1               
+0020CB  1               
+0020CB  1               ;--------------PART 3 -------------------------------------------
+0020CB  1               
+0020CB  1               C_START:
+0020CB  1  20 08 25               JSR CLEARSCR
+0020CE  1  A9 10                  LDA #$10
+0020D0  1  85 06        		  STA counter
+0020D2  1                         ; Zufallsgenerator initialisieren
+0020D2  1  A9 A5                  LDA #$A5
+0020D4  1  85 49                  STA RNDVAL
+0020D6  1               
+0020D6  1  A9 02                  LDA #2
+0020D8  1  85 4E                  STA RADIUS
+0020DA  1               
+0020DA  1                         ; Zufälliges Zentrum und Farbe wählen
+0020DA  1  20 34 21               JSR NEWCENTER
+0020DD  1  20 49 21               JSR NEWCOLOR
+0020E0  1               
+0020E0  1               GROWLOOP:
+0020E0  1                         ; Kreis zeichnen
+0020E0  1  A9 00                  LDA #0
+0020E2  1  85 4F                  STA ANGLE
+0020E4  1               
+0020E4  1               DRAWLOOP:
+0020E4  1  A9 2A                  LDA #STAR_CHR
+0020E6  1  20 76 21               JSR DRAW_ALL
+0020E9  1               
+0020E9  1  E6 4F                  INC ANGLE
+0020EB  1  A5 4F                  LDA ANGLE
+0020ED  1  C9 04                  CMP #4
+0020EF  1  90 F3                  BCC DRAWLOOP
+0020F1  1               
+0020F1  1                         ; Verzögerung
+0020F1  1  A2 05                  LDX #$05
+0020F3  1  A0 80        DELAY1:   LDY #$80
+0020F5  1  88           DELAY2:   DEY
+0020F6  1  D0 FD                  BNE DELAY2
+0020F8  1  CA                     DEX
+0020F9  1  D0 F8                  BNE DELAY1
+0020FB  1               
+0020FB  1                         ; Alten Kreis löschen
+0020FB  1  A9 00                  LDA #0
+0020FD  1  85 4F                  STA ANGLE
+0020FF  1               
+0020FF  1               ERASELOOP:
+0020FF  1  A9 20                  LDA #SPACE_CHR
+002101  1  20 76 21               JSR DRAW_ALL
+002104  1               
+002104  1  E6 4F                  INC ANGLE
+002106  1  A5 4F                  LDA ANGLE
+002108  1  C9 04                  CMP #4
+00210A  1  90 F3                  BCC ERASELOOP
+00210C  1               
+00210C  1                         ; Radius erhöhen
+00210C  1  E6 4E                  INC RADIUS
+00210E  1  A5 4E                  LDA RADIUS
+002110  1  C9 0C                  CMP #12       ; GEÄNDERT: 12 statt 18
+002112  1  90 CC                  BCC GROWLOOP
+002114  1               
+002114  1                         ; Von vorne mit neuem Zentrum
+002114  1  C6 06        		  DEC counter      ;bitte nur 16 wiederholungen
+002116  1  A5 06        		  LDA counter
+002118  1  F0 10        		  BEQ STRJMP
+00211A  1  20 08 25               JSR CLEARSCR
+00211D  1  A9 02                  LDA #2
+00211F  1  85 4E                  STA RADIUS
+002121  1  20 34 21               JSR NEWCENTER
+002124  1  20 49 21               JSR NEWCOLOR
+002127  1  4C E0 20               JMP GROWLOOP
+00212A  1               STRJMP:
+00212A  1  A9 61        		  LDA #97
+00212C  1  85 53        		  STA COLOR
+00212E  1  20 57 21     		  JSR SETCOLR
+002131  1  4C 47 22     		  JMP STERN   ;change to a dispplay scroller!
+002134  1               
+002134  1               ; Neues zufälliges Zentrum wählen
+002134  1               NEWCENTER:
+002134  1                         ; X: 32-48 (Range 16)
+002134  1  20 6C 21               JSR RANDOM2
+002137  1  29 0F                  AND #$0F      ; 0-15
+002139  1  18                     CLC
+00213A  1  69 20                  ADC #32       ; 32-47
+00213C  1  85 51                  STA CENTERX_V
+00213E  1               
+00213E  1                         ; Y: 8-16 (Range 8)
+00213E  1  20 6C 21               JSR RANDOM2
+002141  1  29 07                  AND #$07      ; 0-7
+002143  1  18                     CLC
+002144  1  69 08                  ADC #8        ; 8-15
+002146  1  85 52                  STA CENTERY_V
+002148  1  60                     RTS
+002149  1               
+002149  1               ; Neue zufällige Farbe wählen (31-37)
+002149  1               NEWCOLOR:
+002149  1  20 6C 21               JSR RANDOM2
+00214C  1  29 07                  AND #$07      ; 0-7
+00214E  1  C9 07                  CMP #7        ; Wenn >= 7, neu würfeln
+002150  1  B0 F7                  BCS NEWCOLOR
+002152  1  18                     CLC
+002153  1  69 1F                  ADC #31       ; 31-37
+002155  1  85 53                  STA COLOR
+002157  1               
+002157  1               ; Farbe setzen: ESC[Xm
+002157  1  A9 1B        SETCOLR:   LDA #$1B      ; ESC
+002159  1  20 A0 1E               JSR CHOUT
+00215C  1  A9 5B                  LDA #$5B      ; '['
+00215E  1  20 A0 1E               JSR CHOUT
+002161  1  A5 53                  LDA COLOR
+002163  1  20 DF 24               JSR PUTDEC
+002166  1  A9 6D                  LDA #$6D      ; 'm'
+002168  1  20 A0 1E               JSR CHOUT
+00216B  1  60                     RTS
+00216C  1               
+00216C  1               ; Zufallszahl 0-255 erzeugen
+00216C  1               RANDOM2:
+00216C  1  A5 49                  LDA RNDVAL
+00216E  1  0A                     ASL           ; Bit 7 ins Carry
+00216F  1  90 02                  BCC RAND2
+002171  1  49 1D                  EOR #$1D      ; Polynom für 8-bit LFSR
+002173  1  85 49        RAND2:    STA RNDVAL
+002175  1  60                     RTS
+002176  1               
+002176  1               ; Alle 4 Quadranten zeichnen
+002176  1               ; A = Zeichen (STAR oder SPACE)
+002176  1               DRAW_ALL:
+002176  1  85 50                  STA DRAWCHAR  ; In eigene Variable!
+002178  1               
+002178  1  20 9A 21               JSR CALC_Q0
+00217B  1  20 91 21               JSR PLOT
+00217E  1               
+00217E  1  20 BE 21               JSR CALC_Q1
+002181  1  20 91 21               JSR PLOT
+002184  1               
+002184  1  20 E6 21               JSR CALC_Q2
+002187  1  20 91 21               JSR PLOT
+00218A  1               
+00218A  1  20 0A 22               JSR CALC_Q3
+00218D  1  20 91 21               JSR PLOT
+002190  1               
+002190  1  60                     RTS
+002191  1               
+002191  1               PLOT:
+002191  1  20 C0 24               JSR GOTOXY
+002194  1  A5 50                  LDA DRAWCHAR  ; Von eigener Variable lesen
+002196  1  20 A0 1E               JSR CHOUT
+002199  1  60                     RTS
+00219A  1               
+00219A  1               ; Q0: X=center+cos*r (VOLL), Y=center-sin*r/2 (HALB!)
+00219A  1               CALC_Q0:
+00219A  1  A9 04                  LDA #4
+00219C  1  38                     SEC
+00219D  1  E5 4F                  SBC ANGLE
+00219F  1  AA                     TAX
+0021A0  1  BD 91 2B               LDA SINTAB,X
+0021A3  1  20 2A 22               JSR SCALE
+0021A6  1                         ; X bleibt voll
+0021A6  1  18                     CLC
+0021A7  1  65 51                  ADC CENTERX_V
+0021A9  1  85 4A                  STA CURX
+0021AB  1               
+0021AB  1  A6 4F                  LDX ANGLE
+0021AD  1  BD 91 2B               LDA SINTAB,X
+0021B0  1  20 2A 22               JSR SCALE
+0021B3  1  4A                     LSR           ; Y halbieren für 2:1 Verhältnis!
+0021B4  1  85 4C                  STA TEMP
+0021B6  1  A5 52                  LDA CENTERY_V
+0021B8  1  38                     SEC
+0021B9  1  E5 4C                  SBC TEMP
+0021BB  1  85 4B                  STA CURY
+0021BD  1  60                     RTS
+0021BE  1               
+0021BE  1               ; Q1: X=center-sin*r (VOLL), Y=center-cos*r/2 (HALB!)
+0021BE  1               CALC_Q1:
+0021BE  1  A6 4F                  LDX ANGLE
+0021C0  1  BD 91 2B               LDA SINTAB,X
+0021C3  1  20 2A 22               JSR SCALE
+0021C6  1                         ; X bleibt voll
+0021C6  1  85 4C                  STA TEMP
+0021C8  1  A5 51                  LDA CENTERX_V
+0021CA  1  38                     SEC
+0021CB  1  E5 4C                  SBC TEMP
+0021CD  1  85 4A                  STA CURX
+0021CF  1               
+0021CF  1  A9 04                  LDA #4
+0021D1  1  38                     SEC
+0021D2  1  E5 4F                  SBC ANGLE
+0021D4  1  AA                     TAX
+0021D5  1  BD 91 2B               LDA SINTAB,X
+0021D8  1  20 2A 22               JSR SCALE
+0021DB  1  4A                     LSR           ; Y halbieren!
+0021DC  1  85 4C                  STA TEMP
+0021DE  1  A5 52                  LDA CENTERY_V
+0021E0  1  38                     SEC
+0021E1  1  E5 4C                  SBC TEMP
+0021E3  1  85 4B                  STA CURY
+0021E5  1  60                     RTS
+0021E6  1               
+0021E6  1               ; Q2: X=center-cos*r (VOLL), Y=center+sin*r/2 (HALB!)
+0021E6  1               CALC_Q2:
+0021E6  1  A9 04                  LDA #4
+0021E8  1  38                     SEC
+0021E9  1  E5 4F                  SBC ANGLE
+0021EB  1  AA                     TAX
+0021EC  1  BD 91 2B               LDA SINTAB,X
+0021EF  1  20 2A 22               JSR SCALE
+0021F2  1                         ; X bleibt voll
+0021F2  1  85 4C                  STA TEMP
+0021F4  1  A5 51                  LDA CENTERX_V
+0021F6  1  38                     SEC
+0021F7  1  E5 4C                  SBC TEMP
+0021F9  1  85 4A                  STA CURX
+0021FB  1               
+0021FB  1  A6 4F                  LDX ANGLE
+0021FD  1  BD 91 2B               LDA SINTAB,X
+002200  1  20 2A 22               JSR SCALE
+002203  1  4A                     LSR           ; Y halbieren!
+002204  1  18                     CLC
+002205  1  65 52                  ADC CENTERY_V
+002207  1  85 4B                  STA CURY
+002209  1  60                     RTS
+00220A  1               
+00220A  1               ; Q3: X=center+sin*r (VOLL), Y=center+cos*r/2 (HALB!)
+00220A  1               CALC_Q3:
+00220A  1  A6 4F                  LDX ANGLE
+00220C  1  BD 91 2B               LDA SINTAB,X
+00220F  1  20 2A 22               JSR SCALE
+002212  1                         ; X bleibt voll
+002212  1  18                     CLC
+002213  1  65 51                  ADC CENTERX_V
+002215  1  85 4A                  STA CURX
+002217  1               
+002217  1  A9 04                  LDA #4
+002219  1  38                     SEC
+00221A  1  E5 4F                  SBC ANGLE
+00221C  1  AA                     TAX
+00221D  1  BD 91 2B               LDA SINTAB,X
+002220  1  20 2A 22               JSR SCALE
+002223  1  4A                     LSR           ; Y halbieren!
+002224  1  18                     CLC
+002225  1  65 52                  ADC CENTERY_V
+002227  1  85 4B                  STA CURY
+002229  1  60                     RTS
+00222A  1               
+00222A  1               SCALE:
+00222A  1  85 4C                  STA TEMP
+00222C  1  A4 4E                  LDY RADIUS
+00222E  1  F0 16                  BEQ SCDONE
+002230  1  A9 00                  LDA #0
+002232  1  18           SCLOOP:   CLC
+002233  1  65 4C                  ADC TEMP
+002235  1  88                     DEY
+002236  1  D0 FA                  BNE SCLOOP
+002238  1                         ; Jetzt / 20 (weil SINTAB jetzt 0-20 statt 0-10)
+002238  1  A2 00                  LDX #0
+00223A  1  C9 14        DIVLOOP:  CMP #20
+00223C  1  90 07                  BCC DIVDONE
+00223E  1  38                     SEC
+00223F  1  E9 14                  SBC #20
+002241  1  E8                     INX
+002242  1  4C 3A 22               JMP DIVLOOP
+002245  1  8A           DIVDONE:  TXA
+002246  1  60           SCDONE:   RTS
+002247  1               
+002247  1               ;--------------PART 4 -------------------------------------------
+002247  1               
+002247  1  20 08 25     STERN:   JSR CLEARSCR  ; Bildschirm löschen
+00224A  1               
+00224A  1               ; the end
+00224A  1  A9 18                  LDA #24
+00224C  1  85 4B        		  STA CURY
+00224E  1  A9 3C        		  LDA #60
+002250  1  85 4A        		  STA CURX
+002252  1  20 C0 24     		  JSR GOTOXY
+002255  1  A9 54        		  LDA #$54    ;T
+002257  1  20 A0 1E               JSR CHOUT
+00225A  1  A9 48                  LDA #$48    ;H
+00225C  1  20 A0 1E               JSR CHOUT
+00225F  1  A9 45                  LDA #$45    ;E
+002261  1  20 A0 1E               JSR CHOUT
+002264  1  A9 20                  LDA #$20    ;SPC
+002266  1  20 A0 1E               JSR CHOUT
+002269  1  A9 20        		  LDA #$20    ;SPC
+00226B  1  20 A0 1E               JSR CHOUT
+00226E  1  A9 45        		  LDA #$45    ;E
+002270  1  20 A0 1E               JSR CHOUT
+002273  1  A9 4E                  LDA #$4E    ;N
+002275  1  20 A0 1E               JSR CHOUT
+002278  1  A9 44                  LDA #$44    ;D
+00227A  1  20 A0 1E               JSR CHOUT
+00227D  1               
+00227D  1  A9 A5                  LDA #$A5      ; Seed für Zufallsgenerator
+00227F  1  85 49                  STA RNDVAL
+002281  1               
+002281  1                         ; Alle 5 Sterne initialisieren
+002281  1  A9 30                  LDA #STAR0
+002283  1  20 BB 22               JSR INITSTAR
+002286  1  A9 35                  LDA #STAR1
+002288  1  20 BB 22               JSR INITSTAR
+00228B  1  A9 3A                  LDA #STAR2
+00228D  1  20 BB 22               JSR INITSTAR
+002290  1  A9 3F                  LDA #STAR3
+002292  1  20 BB 22               JSR INITSTAR
+002295  1  A9 44                  LDA #STAR4
+002297  1  20 BB 22               JSR INITSTAR
+00229A  1               
+00229A  1               MAINLOOP:
+00229A  1                         ; Verzögerung
+00229A  1  A2 80                  LDX #$80
+00229C  1  CA           DELAY3:   DEX
+00229D  1  D0 FD                  BNE DELAY3
+00229F  1               
+00229F  1                         ; Alle 5 Sterne bewegen
+00229F  1  A9 30                  LDA #STAR0
+0022A1  1  20 D6 22               JSR MOVESTAR
+0022A4  1  A9 35                  LDA #STAR1
+0022A6  1  20 D6 22               JSR MOVESTAR
+0022A9  1  A9 3A                  LDA #STAR2
+0022AB  1  20 D6 22               JSR MOVESTAR
+0022AE  1  A9 3F                  LDA #STAR3
+0022B0  1  20 D6 22               JSR MOVESTAR
+0022B3  1  A9 44                  LDA #STAR4
+0022B5  1  20 D6 22               JSR MOVESTAR
+0022B8  1               
+0022B8  1  4C 9A 22               JMP MAINLOOP
+0022BB  1               
+0022BB  1               ; Stern initialisieren
+0022BB  1               ; A = Adresse des Sterns
+0022BB  1               INITSTAR:
+0022BB  1  85 4D                  STA STARPTR
+0022BD  1  A6 4D                  LDX STARPTR
+0022BF  1               
+0022BF  1                         ; Zufällige Richtung (1-16)
+0022BF  1  20 B2 24               JSR RANDOM
+0022C2  1  18                     CLC
+0022C3  1  69 01                  ADC #1
+0022C5  1  95 00                  STA DIR_OFF,X
+0022C7  1               
+0022C7  1                         ; Position in Mitte
+0022C7  1  A9 28                  LDA #CENTERX
+0022C9  1  95 01                  STA X_OFF,X
+0022CB  1  A9 0C                  LDA #CENTERY
+0022CD  1  95 02                  STA Y_OFF,X
+0022CF  1               
+0022CF  1                         ; Alte Position = aktuelle Position
+0022CF  1  95 04                  STA OLDY_OFF,X
+0022D1  1  A9 28                  LDA #CENTERX
+0022D3  1  95 03                  STA OLDX_OFF,X
+0022D5  1               
+0022D5  1  60                     RTS
+0022D6  1               
+0022D6  1               ; Stern bewegen
+0022D6  1               ; A = Adresse des Sterns
+0022D6  1               MOVESTAR:
+0022D6  1  85 4D                  STA STARPTR
+0022D8  1  A6 4D                  LDX STARPTR
+0022DA  1               
+0022DA  1                         ; Alte Position speichern
+0022DA  1  B5 01                  LDA X_OFF,X
+0022DC  1  95 03                  STA OLDX_OFF,X
+0022DE  1  B5 02                  LDA Y_OFF,X
+0022E0  1  95 04                  STA OLDY_OFF,X
+0022E2  1               
+0022E2  1                         ; Richtung laden und bewegen
+0022E2  1  B5 00                  LDA DIR_OFF,X
+0022E4  1  85 4C                  STA TEMP
+0022E6  1               
+0022E6  1  A5 4C                  LDA TEMP
+0022E8  1  C9 01                  CMP #1
+0022EA  1  D0 03                  BNE CHK2
+0022EC  1  4C 54 23               JMP DIR1
+0022EF  1  C9 02        CHK2:     CMP #2
+0022F1  1  D0 03                  BNE CHK3
+0022F3  1  4C 60 23               JMP DIR2
+0022F6  1  C9 03        CHK3:     CMP #3
+0022F8  1  D0 03                  BNE CHK4
+0022FA  1  4C 6C 23               JMP DIR3
+0022FD  1  C9 04        CHK4:     CMP #4
+0022FF  1  D0 03                  BNE CHK5
+002301  1  4C 78 23               JMP DIR4
+002304  1  C9 05        CHK5:     CMP #5
+002306  1  D0 03                  BNE CHK6
+002308  1  4C 84 23               JMP DIR5
+00230B  1  C9 06        CHK6:     CMP #6
+00230D  1  D0 03                  BNE CHK7
+00230F  1  4C 97 23               JMP DIR6
+002312  1  C9 07        CHK7:     CMP #7
+002314  1  D0 03                  BNE CHK8
+002316  1  4C AA 23               JMP DIR7
+002319  1  C9 08        CHK8:     CMP #8
+00231B  1  D0 03                  BNE CHK9
+00231D  1  4C BD 23               JMP DIR8
+002320  1  C9 09        CHK9:     CMP #9
+002322  1  D0 03                  BNE CHK10
+002324  1  4C D0 23               JMP DIR9
+002327  1  C9 0A        CHK10:    CMP #10
+002329  1  D0 03                  BNE CHK11
+00232B  1  4C E3 23               JMP DIR10
+00232E  1  C9 0B        CHK11:    CMP #11
+002330  1  D0 03                  BNE CHK12
+002332  1  4C F6 23               JMP DIR11
+002335  1  C9 0C        CHK12:    CMP #12
+002337  1  D0 03                  BNE CHK13
+002339  1  4C 09 24               JMP DIR12
+00233C  1  C9 0D        CHK13:    CMP #13
+00233E  1  D0 03                  BNE CHK14
+002340  1  4C 1C 24               JMP DIR13
+002343  1  C9 0E        CHK14:    CMP #14
+002345  1  D0 03                  BNE CHK15
+002347  1  4C 2F 24               JMP DIR14
+00234A  1  C9 0F        CHK15:    CMP #15
+00234C  1  D0 03                  BNE CHK16
+00234E  1  4C 42 24               JMP DIR15
+002351  1  4C 55 24     CHK16:    JMP DIR16
+002354  1               
+002354  1               DIR1:     ; Zwei nach links
+002354  1  A6 4D                  LDX STARPTR
+002356  1  B5 01                  LDA X_OFF,X
+002358  1  38                     SEC
+002359  1  E9 02                  SBC #2
+00235B  1  95 01                  STA X_OFF,X
+00235D  1  4C 65 24               JMP CHECKMOVE
+002360  1               
+002360  1               DIR2:     ; Zwei nach rechts
+002360  1  A6 4D                  LDX STARPTR
+002362  1  B5 01                  LDA X_OFF,X
+002364  1  18                     CLC
+002365  1  69 02                  ADC #2
+002367  1  95 01                  STA X_OFF,X
+002369  1  4C 65 24               JMP CHECKMOVE
+00236C  1               
+00236C  1               DIR3:     ; Eins nach oben
+00236C  1  A6 4D                  LDX STARPTR
+00236E  1  B5 02                  LDA Y_OFF,X
+002370  1  38                     SEC
+002371  1  E9 01                  SBC #1
+002373  1  95 02                  STA Y_OFF,X
+002375  1  4C 65 24               JMP CHECKMOVE
+002378  1               
+002378  1               DIR4:     ; Eins nach unten
+002378  1  A6 4D                  LDX STARPTR
+00237A  1  B5 02                  LDA Y_OFF,X
+00237C  1  18                     CLC
+00237D  1  69 01                  ADC #1
+00237F  1  95 02                  STA Y_OFF,X
+002381  1  4C 65 24               JMP CHECKMOVE
+002384  1               
+002384  1               DIR5:     ; Zwei rechts, eins oben
+002384  1  A6 4D                  LDX STARPTR
+002386  1  B5 01                  LDA X_OFF,X
+002388  1  18                     CLC
+002389  1  69 02                  ADC #2
+00238B  1  95 01                  STA X_OFF,X
+00238D  1  B5 02                  LDA Y_OFF,X
+00238F  1  38                     SEC
+002390  1  E9 01                  SBC #1
+002392  1  95 02                  STA Y_OFF,X
+002394  1  4C 65 24               JMP CHECKMOVE
+002397  1               
+002397  1               DIR6:     ; Eins rechts, zwei oben
+002397  1  A6 4D                  LDX STARPTR
+002399  1  B5 01                  LDA X_OFF,X
+00239B  1  18                     CLC
+00239C  1  69 01                  ADC #1
+00239E  1  95 01                  STA X_OFF,X
+0023A0  1  B5 02                  LDA Y_OFF,X
+0023A2  1  38                     SEC
+0023A3  1  E9 02                  SBC #2
+0023A5  1  95 02                  STA Y_OFF,X
+0023A7  1  4C 65 24               JMP CHECKMOVE
+0023AA  1               
+0023AA  1               DIR7:     ; Eins rechts, zwei unten
+0023AA  1  A6 4D                  LDX STARPTR
+0023AC  1  B5 01                  LDA X_OFF,X
+0023AE  1  18                     CLC
+0023AF  1  69 01                  ADC #1
+0023B1  1  95 01                  STA X_OFF,X
+0023B3  1  B5 02                  LDA Y_OFF,X
+0023B5  1  18                     CLC
+0023B6  1  69 02                  ADC #2
+0023B8  1  95 02                  STA Y_OFF,X
+0023BA  1  4C 65 24               JMP CHECKMOVE
+0023BD  1               
+0023BD  1               DIR8:     ; Zwei rechts, eins unten
+0023BD  1  A6 4D                  LDX STARPTR
+0023BF  1  B5 01                  LDA X_OFF,X
+0023C1  1  18                     CLC
+0023C2  1  69 02                  ADC #2
+0023C4  1  95 01                  STA X_OFF,X
+0023C6  1  B5 02                  LDA Y_OFF,X
+0023C8  1  18                     CLC
+0023C9  1  69 01                  ADC #1
+0023CB  1  95 02                  STA Y_OFF,X
+0023CD  1  4C 65 24               JMP CHECKMOVE
+0023D0  1               
+0023D0  1               DIR9:     ; Eins links, zwei oben
+0023D0  1  A6 4D                  LDX STARPTR
+0023D2  1  B5 01                  LDA X_OFF,X
+0023D4  1  38                     SEC
+0023D5  1  E9 01                  SBC #1
+0023D7  1  95 01                  STA X_OFF,X
+0023D9  1  B5 02                  LDA Y_OFF,X
+0023DB  1  38                     SEC
+0023DC  1  E9 02                  SBC #2
+0023DE  1  95 02                  STA Y_OFF,X
+0023E0  1  4C 65 24               JMP CHECKMOVE
+0023E3  1               
+0023E3  1               DIR10:    ; Zwei links, eins unten
+0023E3  1  A6 4D                  LDX STARPTR
+0023E5  1  B5 01                  LDA X_OFF,X
+0023E7  1  38                     SEC
+0023E8  1  E9 02                  SBC #2
+0023EA  1  95 01                  STA X_OFF,X
+0023EC  1  B5 02                  LDA Y_OFF,X
+0023EE  1  18                     CLC
+0023EF  1  69 01                  ADC #1
+0023F1  1  95 02                  STA Y_OFF,X
+0023F3  1  4C 65 24               JMP CHECKMOVE
+0023F6  1               
+0023F6  1               DIR11:    ; Eins links, ein unten
+0023F6  1  A6 4D                  LDX STARPTR
+0023F8  1  B5 01                  LDA X_OFF,X
+0023FA  1  38                     SEC
+0023FB  1  E9 01                  SBC #1
+0023FD  1  95 01                  STA X_OFF,X
+0023FF  1  B5 02                  LDA Y_OFF,X
+002401  1  18                     CLC
+002402  1  69 01                  ADC #1
+002404  1  95 02                  STA Y_OFF,X
+002406  1  4C 65 24               JMP CHECKMOVE
+002409  1               
+002409  1               DIR12:    ; Zwei links, eins oben
+002409  1  A6 4D                  LDX STARPTR
+00240B  1  B5 01                  LDA X_OFF,X
+00240D  1  38                     SEC
+00240E  1  E9 02                  SBC #2
+002410  1  95 01                  STA X_OFF,X
+002412  1  B5 02                  LDA Y_OFF,X
+002414  1  38                     SEC
+002415  1  E9 01                  SBC #1
+002417  1  95 02                  STA Y_OFF,X
+002419  1  4C 65 24               JMP CHECKMOVE
+00241C  1               
+00241C  1               DIR13:    ; Vier rechts, eins oben
+00241C  1  A6 4D                  LDX STARPTR
+00241E  1  B5 01                  LDA X_OFF,X
+002420  1  18                     CLC
+002421  1  69 04                  ADC #4
+002423  1  95 01                  STA X_OFF,X
+002425  1  B5 02                  LDA Y_OFF,X
+002427  1  38                     SEC
+002428  1  E9 01                  SBC #1
+00242A  1  95 02                  STA Y_OFF,X
+00242C  1  4C 65 24               JMP CHECKMOVE
+00242F  1               
+00242F  1               DIR14:    ; Vier rechts, eins unten
+00242F  1  A6 4D                  LDX STARPTR
+002431  1  B5 01                  LDA X_OFF,X
+002433  1  18                     CLC
+002434  1  69 04                  ADC #4
+002436  1  95 01                  STA X_OFF,X
+002438  1  B5 02                  LDA Y_OFF,X
+00243A  1  18                     CLC
+00243B  1  69 01                  ADC #1
+00243D  1  95 02                  STA Y_OFF,X
+00243F  1  4C 65 24               JMP CHECKMOVE
+002442  1               
+002442  1               DIR15:    ; Vier links, eins oben
+002442  1  A6 4D                  LDX STARPTR
+002444  1  B5 01                  LDA X_OFF,X
+002446  1  38                     SEC
+002447  1  E9 04                  SBC #4
+002449  1  95 01                  STA X_OFF,X
+00244B  1  B5 02                  LDA Y_OFF,X
+00244D  1  38                     SEC
+00244E  1  E9 01                  SBC #1
+002450  1  95 02                  STA Y_OFF,X
+002452  1  4C 65 24               JMP CHECKMOVE
+002455  1               
+002455  1               DIR16:    ; Vier links, eins unten
+002455  1  A6 4D                  LDX STARPTR
+002457  1  B5 01                  LDA X_OFF,X
+002459  1  38                     SEC
+00245A  1  E9 04                  SBC #4
+00245C  1  95 01                  STA X_OFF,X
+00245E  1  B5 02                  LDA Y_OFF,X
+002460  1  18                     CLC
+002461  1  69 01                  ADC #1
+002463  1  95 02                  STA Y_OFF,X
+002465  1               
+002465  1               CHECKMOVE:
+002465  1                         ; Prüfen ob außerhalb des Bildschirms
+002465  1  A6 4D                  LDX STARPTR
+002467  1  B5 01                  LDA X_OFF,X
+002469  1  F0 2F                  BEQ RESTART   ; X=0
+00246B  1  C9 50                  CMP #80
+00246D  1  B0 2B                  BCS RESTART   ; X>=80
+00246F  1  B5 02                  LDA Y_OFF,X
+002471  1  F0 27                  BEQ RESTART   ; Y=0
+002473  1  C9 19                  CMP #25
+002475  1  B0 23                  BCS RESTART   ; Y>=25
+002477  1               
+002477  1                         ; Alte Position löschen
+002477  1  B5 03                  LDA OLDX_OFF,X
+002479  1  85 4A                  STA CURX
+00247B  1  B5 04                  LDA OLDY_OFF,X
+00247D  1  85 4B                  STA CURY
+00247F  1  20 C0 24               JSR GOTOXY
+002482  1  A9 20                  LDA #SPACE_CHR
+002484  1  20 A0 1E               JSR CHOUT
+002487  1               
+002487  1                         ; Neue Position zeichnen
+002487  1  A6 4D                  LDX STARPTR
+002489  1  B5 01                  LDA X_OFF,X
+00248B  1  85 4A                  STA CURX
+00248D  1  B5 02                  LDA Y_OFF,X
+00248F  1  85 4B                  STA CURY
+002491  1  20 C0 24               JSR GOTOXY
+002494  1  A9 2A                  LDA #STAR_CHR
+002496  1  20 A0 1E               JSR CHOUT
+002499  1  60                     RTS
+00249A  1               
+00249A  1               RESTART:
+00249A  1                         ; Alte Position löschen bevor Stern neu startet
+00249A  1  A6 4D                  LDX STARPTR
+00249C  1  B5 03                  LDA OLDX_OFF,X
+00249E  1  85 4A                  STA CURX
+0024A0  1  B5 04                  LDA OLDY_OFF,X
+0024A2  1  85 4B                  STA CURY
+0024A4  1  20 C0 24               JSR GOTOXY
+0024A7  1  A9 20                  LDA #SPACE_CHR
+0024A9  1  20 A0 1E               JSR CHOUT
+0024AC  1               
+0024AC  1                         ; Stern neu starten
+0024AC  1  A5 4D                  LDA STARPTR
+0024AE  1  20 BB 22               JSR INITSTAR
+0024B1  1  60                     RTS
+0024B2  1               
+0024B2  1               ; Zufallszahl 0-15 erzeugen
+0024B2  1               ; Ergebnis in A-Register
+0024B2  1               RANDOM:
+0024B2  1  A5 49                  LDA RNDVAL
+0024B4  1  0A                     ASL           ; Bit 7 ins Carry
+0024B5  1  90 02                  BCC RAND1
+0024B7  1  49 1D                  EOR #$1D      ; Polynom für 8-bit LFSR
+0024B9  1  85 49        RAND1:    STA RNDVAL
+0024BB  1               
+0024BB  1                         ; Jetzt auf 0-15 reduzieren durch Rechtsshift
+0024BB  1  4A                     LSR           ; Shift right
+0024BC  1  4A                     LSR           ; Shift right
+0024BD  1  4A                     LSR           ; Shift right
+0024BE  1  4A                     LSR           ; Shift right
+0024BF  1                         ; A enthält jetzt 0-15
+0024BF  1  60                     RTS
+0024C0  1               
+0024C0  1               ; ANSI Cursor positionieren (Row ; Col)
+0024C0  1               GOTOXY:
+0024C0  1  A9 1B                  LDA #$1B      ; ESC
+0024C2  1  20 A0 1E               JSR CHOUT
+0024C5  1  A9 5B                  LDA #$5B      ; '['
+0024C7  1  20 A0 1E               JSR CHOUT
+0024CA  1               
+0024CA  1  A5 4B                  LDA CURY      ; Row zuerst
+0024CC  1  20 DF 24               JSR PUTDEC
+0024CF  1               
+0024CF  1  A9 3B                  LDA #$3B      ; ';'
+0024D1  1  20 A0 1E               JSR CHOUT
+0024D4  1               
+0024D4  1  A5 4A                  LDA CURX      ; Column danach
+0024D6  1  20 DF 24               JSR PUTDEC
+0024D9  1               
+0024D9  1  A9 48                  LDA #$48      ; 'H'
+0024DB  1  20 A0 1E               JSR CHOUT
+0024DE  1  60                     RTS
+0024DF  1               
+0024DF  1               ; Dezimalzahl ausgeben (A-Register, 0-99)
+0024DF  1               ; Benutzt TEMP als temporäre Variable
+0024DF  1               PUTDEC:
+0024DF  1  85 4C                  STA TEMP      ; Wert sichern
+0024E1  1  A0 00                  LDY #0        ; Zehner-Zähler
+0024E3  1               
+0024E3  1  C9 0A        PUTDEC_T: CMP #10
+0024E5  1  B0 03                  BCS PUTDEC_S  ; >= 10
+0024E7  1  4C F1 24               JMP PUTDEC_D
+0024EA  1  38           PUTDEC_S: SEC
+0024EB  1  E9 0A                  SBC #10
+0024ED  1  C8                     INY
+0024EE  1  4C E3 24               JMP PUTDEC_T
+0024F1  1               
+0024F1  1               PUTDEC_D: ; A enthält Einer
+0024F1  1  AA                     TAX           ; Einer nach X retten
+0024F2  1               
+0024F2  1  98                     TYA           ; Zehner
+0024F3  1  D0 03                  BNE PUTDEC_Z  ; Wenn nicht 0
+0024F5  1  4C FE 24               JMP PUTDEC1
+0024F8  1  18           PUTDEC_Z: CLC
+0024F9  1  69 30                  ADC #$30      ; In ASCII umwandeln
+0024FB  1  20 A0 1E               JSR CHOUT
+0024FE  1               
+0024FE  1  8A           PUTDEC1:  TXA           ; Einer zurück
+0024FF  1  18                     CLC
+002500  1  69 30                  ADC #$30      ; In ASCII umwandeln
+002502  1  20 A0 1E               JSR CHOUT
+002505  1               
+002505  1  A5 4C                  LDA TEMP      ; Original wiederherstellen
+002507  1  60                     RTS
+002508  1               
+002508  1               ; Bildschirm löschen (ANSI)
+002508  1               CLEARSCR:
+002508  1  A9 1B                  LDA #$1B      ; ESC
+00250A  1  20 A0 1E               JSR CHOUT
+00250D  1  A9 5B                  LDA #$5B      ; '['
+00250F  1  20 A0 1E               JSR CHOUT
+002512  1  A9 32                  LDA #$32      ; '2'
+002514  1  20 A0 1E               JSR CHOUT
+002517  1  A9 4A                  LDA #$4A      ; 'J'
+002519  1  20 A0 1E               JSR CHOUT
+00251C  1  60                     RTS
+00251D  1               
+00251D  1               
+00251D  1               ANSIDATA:
+00251D  1               
+00251D  1               ; positionieren
+00251D  1               
+00251D  1  1B 5B 31 33  	    .BYTE $1B, "[13;20H"    ; Position Y=12, X=20
+002521  1  3B 32 30 48  
+002525  1               
+002525  1               ; Sequenz 1: Weißer, blinkender Text
+002525  1  1B 5B 33 37          .BYTE $1B, "[37m"   ; Hell, blink, weiß
+002529  1  6D           
+00252A  1  2A 2A 2A 20          .BYTE "*** 50 YEARS KIM-1 ***"
+00252E  1  35 30 20 59  
+002532  1  45 41 52 53  
+002540  1               
+002540  1               ; Pause durch Spaces (für Timing)
+002540  1  20 20 20 20          .BYTE "                "  ; 16 Leerzeichen
+002544  1  20 20 20 20  
+002548  1  20 20 20 20  
+002550  1               
+002550  1               ; Zurück zur Position
+002550  1  1B 5B 31 33          .BYTE $1B, "[13;20H"
+002554  1  3B 32 30 48  
+002558  1               
+002558  1               ; Sequenz 2: Hellblauer, blinkender Text
+002558  1  1B 5B 33 36          .BYTE $1B, "[36m"   ; Hell, blink, hellblau (bright cyan)
+00255C  1  6D           
+00255D  1  2A 2A 2A 20          .BYTE "*** 50 YEARS KIM-1 ***"
+002561  1  35 30 20 59  
+002565  1  45 41 52 53  
+002573  1  20 20 20 20          .BYTE "                "
+002577  1  20 20 20 20  
+00257B  1  20 20 20 20  
+002583  1               
+002583  1               ; Zurück zur Position
+002583  1  1B 5B 31 33          .BYTE $1B, "[13;20H"
+002587  1  3B 32 30 48  
+00258B  1               
+00258B  1               ; Sequenz 3: Dunkelblauer, blinkender Text
+00258B  1  1B 5B 33 34          .BYTE $1B, "[34m"   ; Hell, blink, blau
+00258F  1  6D           
+002590  1  2A 2A 2A 20          .BYTE "*** 50 YEARS KIM-1 ***"
+002594  1  35 30 20 59  
+002598  1  45 41 52 53  
+0025A6  1  20 20 20 20          .BYTE "                "
+0025AA  1  20 20 20 20  
+0025AE  1  20 20 20 20  
+0025B6  1               
+0025B6  1               ; Zurück zur Position
+0025B6  1  1B 5B 31 33          .BYTE $1B, "[13;20H"
+0025BA  1  3B 32 30 48  
+0025BE  1               
+0025BE  1               ; Sequenz 4: Schwarzer Text (unsichtbar)
+0025BE  1  1B 5B 33 30          .BYTE $1B, "[30m"   ; Hell, blink, schwarz
+0025C2  1  6D           
+0025C3  1  2A 2A 2A 20          .BYTE "*** 50 YEARS KIM-1 ***"
+0025C7  1  35 30 20 59  
+0025CB  1  45 41 52 53  
+0025D9  1  20 20 20 20          .BYTE "                "
+0025DD  1  20 20 20 20  
+0025E1  1  20 20 20 20  
+0025E9  1  1B 5B 30 6D          .BYTE $1B, "[0m"
+0025ED  1               ; Attribute zurücksetzen
+0025ED  1  00                   .BYTE $00               ; String-Terminator
+0025EE  1               
+0025EE  1               ; Now the BG picture
+0025EE  1               ; tadaaaaa
+0025EE  1               
+0025EE  1               ASCIIDATA:
+0025EE  1  1B 5B 48     		.BYTE $1B, "[H"         ; Position home
+0025F1  1  1B 5B 3F 32  		.BYTE $1B, "[?25l"      ; cursor off
+0025F5  1  35 6C        
+0025F7  1  1B 5B 32 4A          .BYTE $1B, "[2J"        ; Clear screen
+0025FB  1  20                   .byte $20
+0025FC  1  58                   .byte $58
+0025FD  1  58                   .byte $58
+0025FE  1  58                   .byte $58
+0025FF  1  58                   .byte $58
+002600  1  58                   .byte $58
+002601  1  20                   .byte $20
+002602  1  58                   .byte $58
+002603  1  58                   .byte $58
+002604  1  58                   .byte $58
+002605  1  20                   .byte $20
+002606  1  20                   .byte $20
+002607  1  20                   .byte $20
+002608  1  58                   .byte $58
+002609  1  58                   .byte $58
+00260A  1  58                   .byte $58
+00260B  1  20                   .byte $20
+00260C  1  20                   .byte $20
+00260D  1  20                   .byte $20
+00260E  1  20                   .byte $20
+00260F  1  20                   .byte $20
+002610  1  20                   .byte $20
+002611  1  20                   .byte $20
+002612  1  20                   .byte $20
+002613  1  20                   .byte $20
+002614  1  20                   .byte $20
+002615  1  58                   .byte $58
+002616  1  58                   .byte $58
+002617  1  58                   .byte $58
+002618  1  58                   .byte $58
+002619  1  58                   .byte $58
+00261A  1  58                   .byte $58
+00261B  1  20                   .byte $20
+00261C  1  20                   .byte $20
+00261D  1  20                   .byte $20
+00261E  1  20                   .byte $20
+00261F  1  20                   .byte $20
+002620  1  20                   .byte $20
+002621  1  20                   .byte $20
+002622  1  20                   .byte $20
+002623  1  20                   .byte $20
+002624  1  20                   .byte $20
+002625  1  20                   .byte $20
+002626  1  58                   .byte $58
+002627  1  58                   .byte $58
+002628  1  58                   .byte $58
+002629  1  58                   .byte $58
+00262A  1  58                   .byte $58
+00262B  1  58                   .byte $58
+00262C  1  58                   .byte $58
+00262D  1  58                   .byte $58
+00262E  1  58                   .byte $58
+00262F  1  58                   .byte $58
+002630  1  58                   .byte $58
+002631  1  58                   .byte $58
+002632  1  0D                   .byte $0D
+002633  1  0A                   .byte $0A
+002634  1  20                   .byte $20
+002635  1  58                   .byte $58
+002636  1  58                   .byte $58
+002637  1  58                   .byte $58
+002638  1  58                   .byte $58
+002639  1  58                   .byte $58
+00263A  1  20                   .byte $20
+00263B  1  58                   .byte $58
+00263C  1  58                   .byte $58
+00263D  1  58                   .byte $58
+00263E  1  58                   .byte $58
+00263F  1  58                   .byte $58
+002640  1  20                   .byte $20
+002641  1  58                   .byte $58
+002642  1  58                   .byte $58
+002643  1  58                   .byte $58
+002644  1  58                   .byte $58
+002645  1  58                   .byte $58
+002646  1  20                   .byte $20
+002647  1  20                   .byte $20
+002648  1  20                   .byte $20
+002649  1  20                   .byte $20
+00264A  1  20                   .byte $20
+00264B  1  58                   .byte $58
+00264C  1  58                   .byte $58
+00264D  1  58                   .byte $58
+00264E  1  58                   .byte $58
+00264F  1  58                   .byte $58
+002650  1  58                   .byte $58
+002651  1  58                   .byte $58
+002652  1  58                   .byte $58
+002653  1  58                   .byte $58
+002654  1  58                   .byte $58
+002655  1  58                   .byte $58
+002656  1  58                   .byte $58
+002657  1  20                   .byte $20
+002658  1  20                   .byte $20
+002659  1  20                   .byte $20
+00265A  1  20                   .byte $20
+00265B  1  20                   .byte $20
+00265C  1  20                   .byte $20
+00265D  1  58                   .byte $58
+00265E  1  58                   .byte $58
+00265F  1  58                   .byte $58
+002660  1  58                   .byte $58
+002661  1  58                   .byte $58
+002662  1  58                   .byte $58
+002663  1  58                   .byte $58
+002664  1  58                   .byte $58
+002665  1  58                   .byte $58
+002666  1  58                   .byte $58
+002667  1  58                   .byte $58
+002668  1  58                   .byte $58
+002669  1  58                   .byte $58
+00266A  1  58                   .byte $58
+00266B  1  0D                   .byte $0D
+00266C  1  0A                   .byte $0A
+00266D  1  20                   .byte $20
+00266E  1  58                   .byte $58
+00266F  1  58                   .byte $58
+002670  1  58                   .byte $58
+002671  1  58                   .byte $58
+002672  1  58                   .byte $58
+002673  1  20                   .byte $20
+002674  1  58                   .byte $58
+002675  1  58                   .byte $58
+002676  1  58                   .byte $58
+002677  1  58                   .byte $58
+002678  1  58                   .byte $58
+002679  1  20                   .byte $20
+00267A  1  58                   .byte $58
+00267B  1  58                   .byte $58
+00267C  1  58                   .byte $58
+00267D  1  58                   .byte $58
+00267E  1  58                   .byte $58
+00267F  1  20                   .byte $20
+002680  1  20                   .byte $20
+002681  1  20                   .byte $20
+002682  1  20                   .byte $20
+002683  1  58                   .byte $58
+002684  1  58                   .byte $58
+002685  1  58                   .byte $58
+002686  1  58                   .byte $58
+002687  1  58                   .byte $58
+002688  1  58                   .byte $58
+002689  1  58                   .byte $58
+00268A  1  58                   .byte $58
+00268B  1  58                   .byte $58
+00268C  1  58                   .byte $58
+00268D  1  58                   .byte $58
+00268E  1  58                   .byte $58
+00268F  1  58                   .byte $58
+002690  1  58                   .byte $58
+002691  1  20                   .byte $20
+002692  1  20                   .byte $20
+002693  1  20                   .byte $20
+002694  1  20                   .byte $20
+002695  1  58                   .byte $58
+002696  1  58                   .byte $58
+002697  1  58                   .byte $58
+002698  1  58                   .byte $58
+002699  1  58                   .byte $58
+00269A  1  58                   .byte $58
+00269B  1  58                   .byte $58
+00269C  1  58                   .byte $58
+00269D  1  58                   .byte $58
+00269E  1  58                   .byte $58
+00269F  1  58                   .byte $58
+0026A0  1  58                   .byte $58
+0026A1  1  58                   .byte $58
+0026A2  1  58                   .byte $58
+0026A3  1  58                   .byte $58
+0026A4  1  0D                   .byte $0D
+0026A5  1  0A                   .byte $0A
+0026A6  1  20                   .byte $20
+0026A7  1  58                   .byte $58
+0026A8  1  58                   .byte $58
+0026A9  1  58                   .byte $58
+0026AA  1  58                   .byte $58
+0026AB  1  58                   .byte $58
+0026AC  1  20                   .byte $20
+0026AD  1  58                   .byte $58
+0026AE  1  58                   .byte $58
+0026AF  1  58                   .byte $58
+0026B0  1  58                   .byte $58
+0026B1  1  58                   .byte $58
+0026B2  1  20                   .byte $20
+0026B3  1  58                   .byte $58
+0026B4  1  58                   .byte $58
+0026B5  1  58                   .byte $58
+0026B6  1  58                   .byte $58
+0026B7  1  58                   .byte $58
+0026B8  1  20                   .byte $20
+0026B9  1  20                   .byte $20
+0026BA  1  20                   .byte $20
+0026BB  1  58                   .byte $58
+0026BC  1  58                   .byte $58
+0026BD  1  58                   .byte $58
+0026BE  1  58                   .byte $58
+0026BF  1  58                   .byte $58
+0026C0  1  58                   .byte $58
+0026C1  1  58                   .byte $58
+0026C2  1  58                   .byte $58
+0026C3  1  58                   .byte $58
+0026C4  1  58                   .byte $58
+0026C5  1  58                   .byte $58
+0026C6  1  58                   .byte $58
+0026C7  1  58                   .byte $58
+0026C8  1  58                   .byte $58
+0026C9  1  58                   .byte $58
+0026CA  1  58                   .byte $58
+0026CB  1  0D                   .byte $0D
+0026CC  1  0A                   .byte $0A
+0026CD  1  20                   .byte $20
+0026CE  1  58                   .byte $58
+0026CF  1  58                   .byte $58
+0026D0  1  58                   .byte $58
+0026D1  1  58                   .byte $58
+0026D2  1  58                   .byte $58
+0026D3  1  20                   .byte $20
+0026D4  1  58                   .byte $58
+0026D5  1  58                   .byte $58
+0026D6  1  58                   .byte $58
+0026D7  1  58                   .byte $58
+0026D8  1  58                   .byte $58
+0026D9  1  20                   .byte $20
+0026DA  1  58                   .byte $58
+0026DB  1  58                   .byte $58
+0026DC  1  58                   .byte $58
+0026DD  1  58                   .byte $58
+0026DE  1  58                   .byte $58
+0026DF  1  20                   .byte $20
+0026E0  1  20                   .byte $20
+0026E1  1  58                   .byte $58
+0026E2  1  58                   .byte $58
+0026E3  1  58                   .byte $58
+0026E4  1  58                   .byte $58
+0026E5  1  58                   .byte $58
+0026E6  1  58                   .byte $58
+0026E7  1  58                   .byte $58
+0026E8  1  58                   .byte $58
+0026E9  1  58                   .byte $58
+0026EA  1  58                   .byte $58
+0026EB  1  58                   .byte $58
+0026EC  1  58                   .byte $58
+0026ED  1  58                   .byte $58
+0026EE  1  58                   .byte $58
+0026EF  1  58                   .byte $58
+0026F0  1  58                   .byte $58
+0026F1  1  58                   .byte $58
+0026F2  1  58                   .byte $58
+0026F3  1  20                   .byte $20
+0026F4  1  20                   .byte $20
+0026F5  1  58                   .byte $58
+0026F6  1  58                   .byte $58
+0026F7  1  58                   .byte $58
+0026F8  1  58                   .byte $58
+0026F9  1  58                   .byte $58
+0026FA  1  58                   .byte $58
+0026FB  1  58                   .byte $58
+0026FC  1  58                   .byte $58
+0026FD  1  58                   .byte $58
+0026FE  1  58                   .byte $58
+0026FF  1  58                   .byte $58
+002700  1  58                   .byte $58
+002701  1  58                   .byte $58
+002702  1  58                   .byte $58
+002703  1  58                   .byte $58
+002704  1  0D                   .byte $0D
+002705  1  0A                   .byte $0A
+002706  1  20                   .byte $20
+002707  1  58                   .byte $58
+002708  1  58                   .byte $58
+002709  1  58                   .byte $58
+00270A  1  58                   .byte $58
+00270B  1  58                   .byte $58
+00270C  1  20                   .byte $20
+00270D  1  58                   .byte $58
+00270E  1  58                   .byte $58
+00270F  1  58                   .byte $58
+002710  1  58                   .byte $58
+002711  1  58                   .byte $58
+002712  1  20                   .byte $20
+002713  1  58                   .byte $58
+002714  1  58                   .byte $58
+002715  1  58                   .byte $58
+002716  1  58                   .byte $58
+002717  1  58                   .byte $58
+002718  1  20                   .byte $20
+002719  1  20                   .byte $20
+00271A  1  58                   .byte $58
+00271B  1  58                   .byte $58
+00271C  1  58                   .byte $58
+00271D  1  58                   .byte $58
+00271E  1  58                   .byte $58
+00271F  1  58                   .byte $58
+002720  1  58                   .byte $58
+002721  1  58                   .byte $58
+002722  1  58                   .byte $58
+002723  1  58                   .byte $58
+002724  1  58                   .byte $58
+002725  1  58                   .byte $58
+002726  1  58                   .byte $58
+002727  1  58                   .byte $58
+002728  1  58                   .byte $58
+002729  1  58                   .byte $58
+00272A  1  58                   .byte $58
+00272B  1  58                   .byte $58
+00272C  1  20                   .byte $20
+00272D  1  20                   .byte $20
+00272E  1  58                   .byte $58
+00272F  1  58                   .byte $58
+002730  1  58                   .byte $58
+002731  1  58                   .byte $58
+002732  1  58                   .byte $58
+002733  1  58                   .byte $58
+002734  1  58                   .byte $58
+002735  1  58                   .byte $58
+002736  1  58                   .byte $58
+002737  1  58                   .byte $58
+002738  1  58                   .byte $58
+002739  1  58                   .byte $58
+00273A  1  58                   .byte $58
+00273B  1  58                   .byte $58
+00273C  1  58                   .byte $58
+00273D  1  0D                   .byte $0D
+00273E  1  0A                   .byte $0A
+00273F  1  20                   .byte $20
+002740  1  58                   .byte $58
+002741  1  58                   .byte $58
+002742  1  58                   .byte $58
+002743  1  58                   .byte $58
+002744  1  58                   .byte $58
+002745  1  20                   .byte $20
+002746  1  58                   .byte $58
+002747  1  58                   .byte $58
+002748  1  58                   .byte $58
+002749  1  58                   .byte $58
+00274A  1  58                   .byte $58
+00274B  1  20                   .byte $20
+00274C  1  58                   .byte $58
+00274D  1  58                   .byte $58
+00274E  1  58                   .byte $58
+00274F  1  58                   .byte $58
+002750  1  58                   .byte $58
+002751  1  20                   .byte $20
+002752  1  20                   .byte $20
+002753  1  58                   .byte $58
+002754  1  58                   .byte $58
+002755  1  58                   .byte $58
+002756  1  58                   .byte $58
+002757  1  58                   .byte $58
+002758  1  58                   .byte $58
+002759  1  58                   .byte $58
+00275A  1  58                   .byte $58
+00275B  1  58                   .byte $58
+00275C  1  58                   .byte $58
+00275D  1  58                   .byte $58
+00275E  1  58                   .byte $58
+00275F  1  58                   .byte $58
+002760  1  58                   .byte $58
+002761  1  58                   .byte $58
+002762  1  58                   .byte $58
+002763  1  58                   .byte $58
+002764  1  58                   .byte $58
+002765  1  20                   .byte $20
+002766  1  20                   .byte $20
+002767  1  58                   .byte $58
+002768  1  58                   .byte $58
+002769  1  58                   .byte $58
+00276A  1  58                   .byte $58
+00276B  1  58                   .byte $58
+00276C  1  58                   .byte $58
+00276D  1  58                   .byte $58
+00276E  1  58                   .byte $58
+00276F  1  58                   .byte $58
+002770  1  58                   .byte $58
+002771  1  58                   .byte $58
+002772  1  58                   .byte $58
+002773  1  58                   .byte $58
+002774  1  58                   .byte $58
+002775  1  58                   .byte $58
+002776  1  0D                   .byte $0D
+002777  1  0A                   .byte $0A
+002778  1  20                   .byte $20
+002779  1  58                   .byte $58
+00277A  1  58                   .byte $58
+00277B  1  58                   .byte $58
+00277C  1  58                   .byte $58
+00277D  1  58                   .byte $58
+00277E  1  20                   .byte $20
+00277F  1  58                   .byte $58
+002780  1  58                   .byte $58
+002781  1  58                   .byte $58
+002782  1  58                   .byte $58
+002783  1  58                   .byte $58
+002784  1  20                   .byte $20
+002785  1  58                   .byte $58
+002786  1  58                   .byte $58
+002787  1  58                   .byte $58
+002788  1  58                   .byte $58
+002789  1  58                   .byte $58
+00278A  1  20                   .byte $20
+00278B  1  20                   .byte $20
+00278C  1  20                   .byte $20
+00278D  1  58                   .byte $58
+00278E  1  58                   .byte $58
+00278F  1  58                   .byte $58
+002790  1  58                   .byte $58
+002791  1  58                   .byte $58
+002792  1  58                   .byte $58
+002793  1  58                   .byte $58
+002794  1  58                   .byte $58
+002795  1  58                   .byte $58
+002796  1  58                   .byte $58
+002797  1  58                   .byte $58
+002798  1  58                   .byte $58
+002799  1  58                   .byte $58
+00279A  1  58                   .byte $58
+00279B  1  58                   .byte $58
+00279C  1  58                   .byte $58
+00279D  1  0D                   .byte $0D
+00279E  1  0A                   .byte $0A
+00279F  1  20                   .byte $20
+0027A0  1  58                   .byte $58
+0027A1  1  58                   .byte $58
+0027A2  1  58                   .byte $58
+0027A3  1  58                   .byte $58
+0027A4  1  58                   .byte $58
+0027A5  1  20                   .byte $20
+0027A6  1  58                   .byte $58
+0027A7  1  58                   .byte $58
+0027A8  1  58                   .byte $58
+0027A9  1  58                   .byte $58
+0027AA  1  58                   .byte $58
+0027AB  1  20                   .byte $20
+0027AC  1  58                   .byte $58
+0027AD  1  58                   .byte $58
+0027AE  1  58                   .byte $58
+0027AF  1  58                   .byte $58
+0027B0  1  58                   .byte $58
+0027B1  1  20                   .byte $20
+0027B2  1  20                   .byte $20
+0027B3  1  20                   .byte $20
+0027B4  1  20                   .byte $20
+0027B5  1  58                   .byte $58
+0027B6  1  58                   .byte $58
+0027B7  1  58                   .byte $58
+0027B8  1  58                   .byte $58
+0027B9  1  58                   .byte $58
+0027BA  1  58                   .byte $58
+0027BB  1  58                   .byte $58
+0027BC  1  58                   .byte $58
+0027BD  1  58                   .byte $58
+0027BE  1  58                   .byte $58
+0027BF  1  58                   .byte $58
+0027C0  1  58                   .byte $58
+0027C1  1  58                   .byte $58
+0027C2  1  58                   .byte $58
+0027C3  1  20                   .byte $20
+0027C4  1  20                   .byte $20
+0027C5  1  20                   .byte $20
+0027C6  1  20                   .byte $20
+0027C7  1  58                   .byte $58
+0027C8  1  58                   .byte $58
+0027C9  1  58                   .byte $58
+0027CA  1  58                   .byte $58
+0027CB  1  58                   .byte $58
+0027CC  1  58                   .byte $58
+0027CD  1  58                   .byte $58
+0027CE  1  58                   .byte $58
+0027CF  1  58                   .byte $58
+0027D0  1  58                   .byte $58
+0027D1  1  58                   .byte $58
+0027D2  1  58                   .byte $58
+0027D3  1  58                   .byte $58
+0027D4  1  58                   .byte $58
+0027D5  1  58                   .byte $58
+0027D6  1  0D                   .byte $0D
+0027D7  1  0A                   .byte $0A
+0027D8  1  20                   .byte $20
+0027D9  1  58                   .byte $58
+0027DA  1  58                   .byte $58
+0027DB  1  58                   .byte $58
+0027DC  1  58                   .byte $58
+0027DD  1  58                   .byte $58
+0027DE  1  20                   .byte $20
+0027DF  1  58                   .byte $58
+0027E0  1  58                   .byte $58
+0027E1  1  58                   .byte $58
+0027E2  1  58                   .byte $58
+0027E3  1  58                   .byte $58
+0027E4  1  20                   .byte $20
+0027E5  1  58                   .byte $58
+0027E6  1  58                   .byte $58
+0027E7  1  58                   .byte $58
+0027E8  1  58                   .byte $58
+0027E9  1  58                   .byte $58
+0027EA  1  20                   .byte $20
+0027EB  1  20                   .byte $20
+0027EC  1  20                   .byte $20
+0027ED  1  20                   .byte $20
+0027EE  1  20                   .byte $20
+0027EF  1  58                   .byte $58
+0027F0  1  58                   .byte $58
+0027F1  1  58                   .byte $58
+0027F2  1  58                   .byte $58
+0027F3  1  58                   .byte $58
+0027F4  1  58                   .byte $58
+0027F5  1  58                   .byte $58
+0027F6  1  58                   .byte $58
+0027F7  1  58                   .byte $58
+0027F8  1  58                   .byte $58
+0027F9  1  58                   .byte $58
+0027FA  1  58                   .byte $58
+0027FB  1  20                   .byte $20
+0027FC  1  20                   .byte $20
+0027FD  1  20                   .byte $20
+0027FE  1  20                   .byte $20
+0027FF  1  20                   .byte $20
+002800  1  58                   .byte $58
+002801  1  58                   .byte $58
+002802  1  58                   .byte $58
+002803  1  58                   .byte $58
+002804  1  58                   .byte $58
+002805  1  58                   .byte $58
+002806  1  58                   .byte $58
+002807  1  58                   .byte $58
+002808  1  58                   .byte $58
+002809  1  58                   .byte $58
+00280A  1  58                   .byte $58
+00280B  1  58                   .byte $58
+00280C  1  58                   .byte $58
+00280D  1  58                   .byte $58
+00280E  1  0D                   .byte $0D
+00280F  1  0A                   .byte $0A
+002810  1  20                   .byte $20
+002811  1  58                   .byte $58
+002812  1  58                   .byte $58
+002813  1  58                   .byte $58
+002814  1  58                   .byte $58
+002815  1  58                   .byte $58
+002816  1  20                   .byte $20
+002817  1  58                   .byte $58
+002818  1  58                   .byte $58
+002819  1  58                   .byte $58
+00281A  1  58                   .byte $58
+00281B  1  58                   .byte $58
+00281C  1  20                   .byte $20
+00281D  1  58                   .byte $58
+00281E  1  58                   .byte $58
+00281F  1  58                   .byte $58
+002820  1  58                   .byte $58
+002821  1  58                   .byte $58
+002822  1  20                   .byte $20
+002823  1  20                   .byte $20
+002824  1  20                   .byte $20
+002825  1  20                   .byte $20
+002826  1  20                   .byte $20
+002827  1  20                   .byte $20
+002828  1  20                   .byte $20
+002829  1  20                   .byte $20
+00282A  1  58                   .byte $58
+00282B  1  58                   .byte $58
+00282C  1  58                   .byte $58
+00282D  1  58                   .byte $58
+00282E  1  58                   .byte $58
+00282F  1  58                   .byte $58
+002830  1  20                   .byte $20
+002831  1  20                   .byte $20
+002832  1  20                   .byte $20
+002833  1  20                   .byte $20
+002834  1  20                   .byte $20
+002835  1  20                   .byte $20
+002836  1  20                   .byte $20
+002837  1  20                   .byte $20
+002838  1  58                   .byte $58
+002839  1  58                   .byte $58
+00283A  1  58                   .byte $58
+00283B  1  58                   .byte $58
+00283C  1  58                   .byte $58
+00283D  1  58                   .byte $58
+00283E  1  58                   .byte $58
+00283F  1  58                   .byte $58
+002840  1  58                   .byte $58
+002841  1  58                   .byte $58
+002842  1  58                   .byte $58
+002843  1  58                   .byte $58
+002844  1  0D                   .byte $0D
+002845  1  0A                   .byte $0A
+002846  1  0D                   .byte $0D
+002847  1  0A                   .byte $0A
+002848  1  0D                   .byte $0D
+002849  1  0A                   .byte $0A
+00284A  1  0D                   .byte $0D
+00284B  1  0A                   .byte $0A
+00284C  1  58                   .byte $58
+00284D  1  58                   .byte $58
+00284E  1  58                   .byte $58
+00284F  1  58                   .byte $58
+002850  1  20                   .byte $20
+002851  1  20                   .byte $20
+002852  1  20                   .byte $20
+002853  1  58                   .byte $58
+002854  1  58                   .byte $58
+002855  1  58                   .byte $58
+002856  1  58                   .byte $58
+002857  1  20                   .byte $20
+002858  1  20                   .byte $20
+002859  1  20                   .byte $20
+00285A  1  58                   .byte $58
+00285B  1  58                   .byte $58
+00285C  1  58                   .byte $58
+00285D  1  58                   .byte $58
+00285E  1  20                   .byte $20
+00285F  1  20                   .byte $20
+002860  1  58                   .byte $58
+002861  1  58                   .byte $58
+002862  1  58                   .byte $58
+002863  1  58                   .byte $58
+002864  1  20                   .byte $20
+002865  1  20                   .byte $20
+002866  1  20                   .byte $20
+002867  1  20                   .byte $20
+002868  1  20                   .byte $20
+002869  1  20                   .byte $20
+00286A  1  20                   .byte $20
+00286B  1  20                   .byte $20
+00286C  1  20                   .byte $20
+00286D  1  20                   .byte $20
+00286E  1  58                   .byte $58
+00286F  1  58                   .byte $58
+002870  1  58                   .byte $58
+002871  1  58                   .byte $58
+002872  1  20                   .byte $20
+002873  1  20                   .byte $20
+002874  1  20                   .byte $20
+002875  1  20                   .byte $20
+002876  1  20                   .byte $20
+002877  1  20                   .byte $20
+002878  1  20                   .byte $20
+002879  1  20                   .byte $20
+00287A  1  20                   .byte $20
+00287B  1  20                   .byte $20
+00287C  1  58                   .byte $58
+00287D  1  58                   .byte $58
+00287E  1  58                   .byte $58
+00287F  1  58                   .byte $58
+002880  1  58                   .byte $58
+002881  1  58                   .byte $58
+002882  1  58                   .byte $58
+002883  1  58                   .byte $58
+002884  1  0D                   .byte $0D
+002885  1  0A                   .byte $0A
+002886  1  58                   .byte $58
+002887  1  58                   .byte $58
+002888  1  58                   .byte $58
+002889  1  58                   .byte $58
+00288A  1  20                   .byte $20
+00288B  1  20                   .byte $20
+00288C  1  58                   .byte $58
+00288D  1  58                   .byte $58
+00288E  1  58                   .byte $58
+00288F  1  58                   .byte $58
+002890  1  20                   .byte $20
+002891  1  20                   .byte $20
+002892  1  20                   .byte $20
+002893  1  20                   .byte $20
+002894  1  58                   .byte $58
+002895  1  58                   .byte $58
+002896  1  58                   .byte $58
+002897  1  58                   .byte $58
+002898  1  20                   .byte $20
+002899  1  20                   .byte $20
+00289A  1  58                   .byte $58
+00289B  1  58                   .byte $58
+00289C  1  58                   .byte $58
+00289D  1  58                   .byte $58
+00289E  1  58                   .byte $58
+00289F  1  58                   .byte $58
+0028A0  1  20                   .byte $20
+0028A1  1  20                   .byte $20
+0028A2  1  20                   .byte $20
+0028A3  1  20                   .byte $20
+0028A4  1  20                   .byte $20
+0028A5  1  20                   .byte $20
+0028A6  1  58                   .byte $58
+0028A7  1  58                   .byte $58
+0028A8  1  58                   .byte $58
+0028A9  1  58                   .byte $58
+0028AA  1  58                   .byte $58
+0028AB  1  58                   .byte $58
+0028AC  1  20                   .byte $20
+0028AD  1  20                   .byte $20
+0028AE  1  20                   .byte $20
+0028AF  1  20                   .byte $20
+0028B0  1  20                   .byte $20
+0028B1  1  20                   .byte $20
+0028B2  1  20                   .byte $20
+0028B3  1  20                   .byte $20
+0028B4  1  20                   .byte $20
+0028B5  1  20                   .byte $20
+0028B6  1  58                   .byte $58
+0028B7  1  58                   .byte $58
+0028B8  1  58                   .byte $58
+0028B9  1  58                   .byte $58
+0028BA  1  58                   .byte $58
+0028BB  1  58                   .byte $58
+0028BC  1  58                   .byte $58
+0028BD  1  58                   .byte $58
+0028BE  1  0D                   .byte $0D
+0028BF  1  0A                   .byte $0A
+0028C0  1  58                   .byte $58
+0028C1  1  58                   .byte $58
+0028C2  1  58                   .byte $58
+0028C3  1  58                   .byte $58
+0028C4  1  20                   .byte $20
+0028C5  1  58                   .byte $58
+0028C6  1  58                   .byte $58
+0028C7  1  58                   .byte $58
+0028C8  1  58                   .byte $58
+0028C9  1  20                   .byte $20
+0028CA  1  20                   .byte $20
+0028CB  1  20                   .byte $20
+0028CC  1  20                   .byte $20
+0028CD  1  20                   .byte $20
+0028CE  1  58                   .byte $58
+0028CF  1  58                   .byte $58
+0028D0  1  58                   .byte $58
+0028D1  1  58                   .byte $58
+0028D2  1  20                   .byte $20
+0028D3  1  20                   .byte $20
+0028D4  1  58                   .byte $58
+0028D5  1  58                   .byte $58
+0028D6  1  58                   .byte $58
+0028D7  1  58                   .byte $58
+0028D8  1  58                   .byte $58
+0028D9  1  58                   .byte $58
+0028DA  1  58                   .byte $58
+0028DB  1  20                   .byte $20
+0028DC  1  20                   .byte $20
+0028DD  1  20                   .byte $20
+0028DE  1  20                   .byte $20
+0028DF  1  58                   .byte $58
+0028E0  1  58                   .byte $58
+0028E1  1  58                   .byte $58
+0028E2  1  58                   .byte $58
+0028E3  1  58                   .byte $58
+0028E4  1  58                   .byte $58
+0028E5  1  58                   .byte $58
+0028E6  1  20                   .byte $20
+0028E7  1  20                   .byte $20
+0028E8  1  20                   .byte $20
+0028E9  1  20                   .byte $20
+0028EA  1  20                   .byte $20
+0028EB  1  20                   .byte $20
+0028EC  1  20                   .byte $20
+0028ED  1  20                   .byte $20
+0028EE  1  20                   .byte $20
+0028EF  1  20                   .byte $20
+0028F0  1  20                   .byte $20
+0028F1  1  20                   .byte $20
+0028F2  1  58                   .byte $58
+0028F3  1  58                   .byte $58
+0028F4  1  58                   .byte $58
+0028F5  1  58                   .byte $58
+0028F6  1  0D                   .byte $0D
+0028F7  1  0A                   .byte $0A
+0028F8  1  58                   .byte $58
+0028F9  1  58                   .byte $58
+0028FA  1  58                   .byte $58
+0028FB  1  58                   .byte $58
+0028FC  1  58                   .byte $58
+0028FD  1  58                   .byte $58
+0028FE  1  58                   .byte $58
+0028FF  1  58                   .byte $58
+002900  1  20                   .byte $20
+002901  1  20                   .byte $20
+002902  1  20                   .byte $20
+002903  1  20                   .byte $20
+002904  1  20                   .byte $20
+002905  1  20                   .byte $20
+002906  1  58                   .byte $58
+002907  1  58                   .byte $58
+002908  1  58                   .byte $58
+002909  1  58                   .byte $58
+00290A  1  20                   .byte $20
+00290B  1  20                   .byte $20
+00290C  1  58                   .byte $58
+00290D  1  58                   .byte $58
+00290E  1  58                   .byte $58
+00290F  1  58                   .byte $58
+002910  1  20                   .byte $20
+002911  1  58                   .byte $58
+002912  1  58                   .byte $58
+002913  1  58                   .byte $58
+002914  1  20                   .byte $20
+002915  1  20                   .byte $20
+002916  1  58                   .byte $58
+002917  1  58                   .byte $58
+002918  1  58                   .byte $58
+002919  1  20                   .byte $20
+00291A  1  58                   .byte $58
+00291B  1  58                   .byte $58
+00291C  1  58                   .byte $58
+00291D  1  58                   .byte $58
+00291E  1  20                   .byte $20
+00291F  1  20                   .byte $20
+002920  1  58                   .byte $58
+002921  1  58                   .byte $58
+002922  1  58                   .byte $58
+002923  1  58                   .byte $58
+002924  1  58                   .byte $58
+002925  1  58                   .byte $58
+002926  1  20                   .byte $20
+002927  1  20                   .byte $20
+002928  1  20                   .byte $20
+002929  1  20                   .byte $20
+00292A  1  58                   .byte $58
+00292B  1  58                   .byte $58
+00292C  1  58                   .byte $58
+00292D  1  58                   .byte $58
+00292E  1  0D                   .byte $0D
+00292F  1  0A                   .byte $0A
+002930  1  58                   .byte $58
+002931  1  58                   .byte $58
+002932  1  58                   .byte $58
+002933  1  58                   .byte $58
+002934  1  58                   .byte $58
+002935  1  58                   .byte $58
+002936  1  58                   .byte $58
+002937  1  58                   .byte $58
+002938  1  20                   .byte $20
+002939  1  20                   .byte $20
+00293A  1  20                   .byte $20
+00293B  1  20                   .byte $20
+00293C  1  20                   .byte $20
+00293D  1  20                   .byte $20
+00293E  1  58                   .byte $58
+00293F  1  58                   .byte $58
+002940  1  58                   .byte $58
+002941  1  58                   .byte $58
+002942  1  20                   .byte $20
+002943  1  20                   .byte $20
+002944  1  58                   .byte $58
+002945  1  58                   .byte $58
+002946  1  58                   .byte $58
+002947  1  58                   .byte $58
+002948  1  20                   .byte $20
+002949  1  58                   .byte $58
+00294A  1  58                   .byte $58
+00294B  1  58                   .byte $58
+00294C  1  20                   .byte $20
+00294D  1  20                   .byte $20
+00294E  1  58                   .byte $58
+00294F  1  58                   .byte $58
+002950  1  58                   .byte $58
+002951  1  20                   .byte $20
+002952  1  58                   .byte $58
+002953  1  58                   .byte $58
+002954  1  58                   .byte $58
+002955  1  58                   .byte $58
+002956  1  20                   .byte $20
+002957  1  20                   .byte $20
+002958  1  58                   .byte $58
+002959  1  58                   .byte $58
+00295A  1  58                   .byte $58
+00295B  1  58                   .byte $58
+00295C  1  58                   .byte $58
+00295D  1  58                   .byte $58
+00295E  1  20                   .byte $20
+00295F  1  20                   .byte $20
+002960  1  20                   .byte $20
+002961  1  20                   .byte $20
+002962  1  58                   .byte $58
+002963  1  58                   .byte $58
+002964  1  58                   .byte $58
+002965  1  58                   .byte $58
+002966  1  0D                   .byte $0D
+002967  1  0A                   .byte $0A
+002968  1  58                   .byte $58
+002969  1  58                   .byte $58
+00296A  1  58                   .byte $58
+00296B  1  58                   .byte $58
+00296C  1  20                   .byte $20
+00296D  1  58                   .byte $58
+00296E  1  58                   .byte $58
+00296F  1  58                   .byte $58
+002970  1  58                   .byte $58
+002971  1  20                   .byte $20
+002972  1  20                   .byte $20
+002973  1  20                   .byte $20
+002974  1  20                   .byte $20
+002975  1  20                   .byte $20
+002976  1  58                   .byte $58
+002977  1  58                   .byte $58
+002978  1  58                   .byte $58
+002979  1  58                   .byte $58
+00297A  1  20                   .byte $20
+00297B  1  20                   .byte $20
+00297C  1  58                   .byte $58
+00297D  1  58                   .byte $58
+00297E  1  58                   .byte $58
+00297F  1  58                   .byte $58
+002980  1  20                   .byte $20
+002981  1  20                   .byte $20
+002982  1  58                   .byte $58
+002983  1  58                   .byte $58
+002984  1  58                   .byte $58
+002985  1  58                   .byte $58
+002986  1  58                   .byte $58
+002987  1  58                   .byte $58
+002988  1  20                   .byte $20
+002989  1  20                   .byte $20
+00298A  1  58                   .byte $58
+00298B  1  58                   .byte $58
+00298C  1  58                   .byte $58
+00298D  1  58                   .byte $58
+00298E  1  20                   .byte $20
+00298F  1  20                   .byte $20
+002990  1  20                   .byte $20
+002991  1  20                   .byte $20
+002992  1  20                   .byte $20
+002993  1  20                   .byte $20
+002994  1  20                   .byte $20
+002995  1  20                   .byte $20
+002996  1  20                   .byte $20
+002997  1  20                   .byte $20
+002998  1  20                   .byte $20
+002999  1  20                   .byte $20
+00299A  1  58                   .byte $58
+00299B  1  58                   .byte $58
+00299C  1  58                   .byte $58
+00299D  1  58                   .byte $58
+00299E  1  0D                   .byte $0D
+00299F  1  0A                   .byte $0A
+0029A0  1  58                   .byte $58
+0029A1  1  58                   .byte $58
+0029A2  1  58                   .byte $58
+0029A3  1  58                   .byte $58
+0029A4  1  20                   .byte $20
+0029A5  1  20                   .byte $20
+0029A6  1  58                   .byte $58
+0029A7  1  58                   .byte $58
+0029A8  1  58                   .byte $58
+0029A9  1  58                   .byte $58
+0029AA  1  20                   .byte $20
+0029AB  1  20                   .byte $20
+0029AC  1  20                   .byte $20
+0029AD  1  20                   .byte $20
+0029AE  1  58                   .byte $58
+0029AF  1  58                   .byte $58
+0029B0  1  58                   .byte $58
+0029B1  1  58                   .byte $58
+0029B2  1  20                   .byte $20
+0029B3  1  20                   .byte $20
+0029B4  1  58                   .byte $58
+0029B5  1  58                   .byte $58
+0029B6  1  58                   .byte $58
+0029B7  1  58                   .byte $58
+0029B8  1  20                   .byte $20
+0029B9  1  20                   .byte $20
+0029BA  1  58                   .byte $58
+0029BB  1  58                   .byte $58
+0029BC  1  58                   .byte $58
+0029BD  1  58                   .byte $58
+0029BE  1  58                   .byte $58
+0029BF  1  58                   .byte $58
+0029C0  1  20                   .byte $20
+0029C1  1  20                   .byte $20
+0029C2  1  58                   .byte $58
+0029C3  1  58                   .byte $58
+0029C4  1  58                   .byte $58
+0029C5  1  58                   .byte $58
+0029C6  1  20                   .byte $20
+0029C7  1  20                   .byte $20
+0029C8  1  20                   .byte $20
+0029C9  1  20                   .byte $20
+0029CA  1  20                   .byte $20
+0029CB  1  20                   .byte $20
+0029CC  1  20                   .byte $20
+0029CD  1  20                   .byte $20
+0029CE  1  20                   .byte $20
+0029CF  1  20                   .byte $20
+0029D0  1  20                   .byte $20
+0029D1  1  20                   .byte $20
+0029D2  1  58                   .byte $58
+0029D3  1  58                   .byte $58
+0029D4  1  58                   .byte $58
+0029D5  1  58                   .byte $58
+0029D6  1  0D                   .byte $0D
+0029D7  1  0A                   .byte $0A
+0029D8  1  58                   .byte $58
+0029D9  1  58                   .byte $58
+0029DA  1  58                   .byte $58
+0029DB  1  58                   .byte $58
+0029DC  1  20                   .byte $20
+0029DD  1  20                   .byte $20
+0029DE  1  20                   .byte $20
+0029DF  1  58                   .byte $58
+0029E0  1  58                   .byte $58
+0029E1  1  58                   .byte $58
+0029E2  1  58                   .byte $58
+0029E3  1  20                   .byte $20
+0029E4  1  20                   .byte $20
+0029E5  1  20                   .byte $20
+0029E6  1  58                   .byte $58
+0029E7  1  58                   .byte $58
+0029E8  1  58                   .byte $58
+0029E9  1  58                   .byte $58
+0029EA  1  20                   .byte $20
+0029EB  1  20                   .byte $20
+0029EC  1  58                   .byte $58
+0029ED  1  58                   .byte $58
+0029EE  1  58                   .byte $58
+0029EF  1  58                   .byte $58
+0029F0  1  20                   .byte $20
+0029F1  1  20                   .byte $20
+0029F2  1  20                   .byte $20
+0029F3  1  58                   .byte $58
+0029F4  1  58                   .byte $58
+0029F5  1  58                   .byte $58
+0029F6  1  58                   .byte $58
+0029F7  1  20                   .byte $20
+0029F8  1  20                   .byte $20
+0029F9  1  20                   .byte $20
+0029FA  1  58                   .byte $58
+0029FB  1  58                   .byte $58
+0029FC  1  58                   .byte $58
+0029FD  1  58                   .byte $58
+0029FE  1  20                   .byte $20
+0029FF  1  20                   .byte $20
+002A00  1  20                   .byte $20
+002A01  1  20                   .byte $20
+002A02  1  20                   .byte $20
+002A03  1  20                   .byte $20
+002A04  1  20                   .byte $20
+002A05  1  20                   .byte $20
+002A06  1  20                   .byte $20
+002A07  1  20                   .byte $20
+002A08  1  58                   .byte $58
+002A09  1  58                   .byte $58
+002A0A  1  58                   .byte $58
+002A0B  1  58                   .byte $58
+002A0C  1  58                   .byte $58
+002A0D  1  58                   .byte $58
+002A0E  1  58                   .byte $58
+002A0F  1  58                   .byte $58
+002A10  1  0D                   .byte $0D
+002A11  1  0A                   .byte $0A
+002A12  1  58                   .byte $58
+002A13  1  58                   .byte $58
+002A14  1  58                   .byte $58
+002A15  1  58                   .byte $58
+002A16  1  20                   .byte $20
+002A17  1  20                   .byte $20
+002A18  1  20                   .byte $20
+002A19  1  20                   .byte $20
+002A1A  1  58                   .byte $58
+002A1B  1  58                   .byte $58
+002A1C  1  58                   .byte $58
+002A1D  1  58                   .byte $58
+002A1E  1  20                   .byte $20
+002A1F  1  20                   .byte $20
+002A20  1  58                   .byte $58
+002A21  1  58                   .byte $58
+002A22  1  58                   .byte $58
+002A23  1  58                   .byte $58
+002A24  1  20                   .byte $20
+002A25  1  20                   .byte $20
+002A26  1  58                   .byte $58
+002A27  1  58                   .byte $58
+002A28  1  58                   .byte $58
+002A29  1  58                   .byte $58
+002A2A  1  20                   .byte $20
+002A2B  1  20                   .byte $20
+002A2C  1  20                   .byte $20
+002A2D  1  58                   .byte $58
+002A2E  1  58                   .byte $58
+002A2F  1  58                   .byte $58
+002A30  1  58                   .byte $58
+002A31  1  20                   .byte $20
+002A32  1  20                   .byte $20
+002A33  1  20                   .byte $20
+002A34  1  58                   .byte $58
+002A35  1  58                   .byte $58
+002A36  1  58                   .byte $58
+002A37  1  58                   .byte $58
+002A38  1  20                   .byte $20
+002A39  1  20                   .byte $20
+002A3A  1  20                   .byte $20
+002A3B  1  20                   .byte $20
+002A3C  1  20                   .byte $20
+002A3D  1  20                   .byte $20
+002A3E  1  20                   .byte $20
+002A3F  1  20                   .byte $20
+002A40  1  20                   .byte $20
+002A41  1  20                   .byte $20
+002A42  1  58                   .byte $58
+002A43  1  58                   .byte $58
+002A44  1  58                   .byte $58
+002A45  1  58                   .byte $58
+002A46  1  58                   .byte $58
+002A47  1  58                   .byte $58
+002A48  1  58                   .byte $58
+002A49  1  58                   .byte $58
+002A4A  1  0D                   .byte $0D
+002A4B  1  0A                   .byte $0A
+002A4C  1  00           		.byte $00
+002A4D  1               
+002A4D  1               GREET:
+002A4D  1  1B 5B 32 4A  		.BYTE $1B, "[2J"        ; Clear screen
+002A51  1  1B 5B 35 3B  		.BYTE $1B, "[5;10H"
+002A55  1  31 30 48     
+002A58  1  1B 5B 33 36          .BYTE $1B, "[36m"
+002A5C  1  6D           
+002A5D  1  67 72 65 65          .BYTE "greetings to:"
+002A61  1  74 69 6E 67  
+002A65  1  73 20 74 6F  
+002A6A  1  1B 5B 33 37          .BYTE $1B, "[37m"
+002A6E  1  6D           
+002A6F  1  1B 5B 36 3B  		.BYTE $1B, "[6;11H"
+002A73  1  31 31 48     
+002A76  1  48 61 6E 73  		.BYTE "Hans O"
+002A7A  1  20 4F        
+002A7C  1  1B 5B 37 3B  		.BYTE $1B, "[7;12H"
+002A80  1  31 32 48     
+002A83  1  4A 6F 68 6E  		.BYTE "John K"
+002A87  1  20 4B        
+002A89  1  1B 5B 38 3B  		.BYTE $1B, "[8;13H"
+002A8D  1  31 33 48     
+002A90  1  4C 69 75 20  		.BYTE "Liu G"
+002A94  1  47           
+002A95  1  1B 5B 39 3B  		.BYTE $1B, "[9;14H"
+002A99  1  31 34 48     
+002A9C  1  44 61 76 65  		.BYTE "Dave H"
+002AA0  1  20 48        
+002AA2  1  1B 5B 31 30  		.BYTE $1B, "[10;15H"
+002AA6  1  3B 31 35 48  
+002AAA  1  45 64 75 61  		.BYTE "Eduardo C"
+002AAE  1  72 64 6F 20  
+002AB2  1  43           
+002AB3  1  1B 5B 31 31  		.BYTE $1B, "[11;16H"
+002AB7  1  3B 31 36 48  
+002ABB  1  52 6F 6E 6E  		.BYTE "Ronny"
+002ABF  1  79           
+002AC0  1  1B 5B 31 32  		.BYTE $1B, "[12;17H"
+002AC4  1  3B 31 37 48  
+002AC8  1  4D 69 63 68  		.BYTE "Michael D"
+002ACC  1  61 65 6C 20  
+002AD0  1  44           
+002AD1  1  1B 5B 31 33  		.BYTE $1B, "[13;18H"
+002AD5  1  3B 31 38 48  
+002AD9  1  43 2E 49 2E  		.BYTE "C.I.H.S (Dave)"
+002ADD  1  48 2E 53 20  
+002AE1  1  28 44 61 76  
+002AE7  1  1B 5B 31 34  		.BYTE $1B, "[14;19H"
+002AEB  1  3B 31 39 48  
+002AEF  1  4A 69 6D     		.BYTE "Jim"
+002AF2  1  1B 5B 31 35  		.BYTE $1B, "[15;20H"
+002AF6  1  3B 32 30 48  
+002AFA  1  44 6F 6D 69  		.BYTE "Dominic B"
+002AFE  1  6E 69 63 20  
+002B02  1  42           
+002B03  1  1B 5B 31 36  		.BYTE $1B, "[16;21H"
+002B07  1  3B 32 31 48  
+002B0B  1  4D 61 6B 73  		.BYTE "Maksim K"
+002B0F  1  69 6D 20 4B  
+002B13  1  1B 5B 31 37  		.BYTE $1B, "[17;10H"
+002B17  1  3B 31 30 48  
+002B1B  1  52 75 75 64  		.BYTE "Ruud B, Cameron K, Bob L, HJM, Ryan R, Carl M and all the rest I forgot"
+002B1F  1  20 42 2C 20  
+002B23  1  43 61 6D 65  
+002B62  1  1B 5B 31 39  		.BYTE $1B, "[19;10H"
+002B66  1  3B 31 30 48  
+002B6A  1  1B 5B 33 36  		.BYTE $1B, "[36m"
+002B6E  1  6D           
+002B6F  1  61 6E 64 20  		.BYTE "and now a little scroller :D"
+002B73  1  6E 6F 77 20  
+002B77  1  61 20 6C 69  
+002B8B  1  1B 5B 33 37  		.BYTE $1B, "[37m"
+002B8F  1  6D           
+002B90  1  00           	    .BYTE $00               ; String-Terminator
+002B91  1               
+002B91  1  00 0A 11 14  SINTAB:   .BYTE 0, 10, 17, 20, 20
+002B95  1  14           
+002B96  1               
+002B96  1  80 80 80 80   msg0:  .BYTE spc, spc, spc, spc, spc, H_, _a, P_, P_, Y_, spc, B_, _i, _r
+002B9A  1  80 F6 5F F3  
+002B9E  1  F3 EE 80 FF  
+002BA4  1  F8 F4 DE 5F  		.BYTE _t, _h, _d, _a, Y_, spc, spc, ch5, ch0, spc
+002BA8  1  EE 80 80 ED  
+002BAC  1  BF 80        
+002BAE  1  EE 7B 5F D0  		.BYTE Y_, _e, _a, _r, S_, spc, spc, spc, spc, spc, $00
+002BB2  1  ED 80 80 80  
+002BB6  1  80 80 00     
+002BB9  1               ending:
+002BB9  1               .END
