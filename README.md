@@ -83,11 +83,11 @@ PUTDEC1:  TXA           ; Einer zurück
 ***NEW***<br>
 I've found out that the compression tool "Exomizer" can be used to compress KIM-1 files, when using the correct command line parameters:
 ```
-.\exomizer.exe  sfx 0x2000 .\exotest.prg -o test.prg -n -Di_load_addr=$2c00
+.\exomizer.exe  sfx 0x2000 .\exotest.bin@0x2000 -o test.prg -n -Di_load_addr=$2c00
               original start    input       output  no anim       new address 
 ```
 
-I needed to transfer the programm from a  *.bin to *.prg as the program expects the start address in the beginning (a C64 thing). I saved the program at 2C00, that is where your new demo startpoint is now Parameters: without any fany animations (-n) or a BASIC start line (-Di_...) , as you might want to have on a C64.
+~~I needed to transfer the programm from a  *.bin to *.prg as the program expects the start address in the beginning (a C64 thing).~~(updated syntax). I saved the program at 2C00, that is where your new demo startpoint is now Parameters: without any fany animations (-n) or a BASIC start line (-Di_...) , as you might want to have on a C64.
 
 There needs to be a bit distance between the old program and the crunched program, 
 overlapping failed when I tried, but maybe a bit, as exomizer decrunches from the end.
